@@ -29,3 +29,20 @@ class RepoStatus(str, Enum):
     INDEXING = "indexing"
     READY = "ready"
     FAILED = "failed"
+
+
+class JobStatus(str, Enum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class AnalysisType(str, Enum):
+    ARCHITECTURE = "architecture"
+    DEPENDENCIES = "dependencies"
+    COMPLEXITY = "complexity"
+    DUPLICATION = "duplication"
+    DEAD_CODE = "dead_code"
+    BUGS = "bugs"
+    SECURITY = "security"

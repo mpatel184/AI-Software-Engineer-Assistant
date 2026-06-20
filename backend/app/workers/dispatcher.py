@@ -16,3 +16,12 @@ class CeleryIndexDispatcher:
         from app.workers.tasks.cleanup import cleanup_repository
 
         cleanup_repository.delay(str(repo_id), clone_path)
+
+
+class CeleryAnalysisDispatcher:
+    """Enqueues the analysis task."""
+
+    def enqueue(self, analysis_id: uuid.UUID) -> None:
+        from app.workers.tasks.analysis import run_analysis
+
+        run_analysis.delay(str(analysis_id))

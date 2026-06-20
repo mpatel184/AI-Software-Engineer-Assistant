@@ -70,3 +70,45 @@ export interface CreateRepoPayload {
   github_url: string;
   name?: string;
 }
+
+export type AnalysisType =
+  | "architecture"
+  | "dependencies"
+  | "complexity"
+  | "duplication"
+  | "dead_code"
+  | "bugs"
+  | "security";
+
+export interface AnalysisSummary {
+  project_summary?: string;
+  architecture_overview?: string;
+  tech_stack?: string[];
+  folder_explanation?: { path: string; purpose: string }[];
+}
+
+export interface AnalysisMetrics {
+  file_count?: number;
+  total_lines?: number;
+  languages?: Record<string, number>;
+  avg_complexity?: number;
+  max_complexity?: number;
+  complexity_hotspots?: { file_path: string; lines: number; estimated_complexity: number }[];
+  dependencies?: Record<string, string[]>;
+  doc_coverage_pct?: number;
+  folder_summary?: { path: string; files: number; lines: number }[];
+}
+
+export interface Analysis {
+  id: string;
+  repository_id: string;
+  type: AnalysisType;
+  status: JobStatus;
+  summary: AnalysisSummary;
+  metrics: AnalysisMetrics;
+  score: number | null;
+  error_message: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string | null;
+}

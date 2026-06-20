@@ -10,9 +10,10 @@ from datetime import datetime
 from typing import Protocol
 
 from app.application.interfaces.vector import Chunk
+from app.domain.entities.analysis import Analysis
 from app.domain.entities.repository import Repository
 from app.domain.entities.user import User
-from app.domain.enums import RepoStatus
+from app.domain.enums import AnalysisType, JobStatus, RepoStatus
 
 
 class UserRepository(Protocol):
@@ -63,3 +64,18 @@ class EmbeddingsMetadataRepository(Protocol):
     async def bulk_add(self, repo_id: uuid.UUID, chunks: list[Chunk], chroma_ids: list[str]) -> None: ...
     async def delete_for_repository(self, repo_id: uuid.UUID) -> None: ...
     async def count_for_repository(self, repo_id: uuid.UUID) -> int: ...
+
+
+class AnalysisRepository(Protocol):
+    async def create(self, analysis: Analysis) -> Analysis: ...
+    async def get(self, analysis_id: uuid.UUID) -> Analysis | None: ...
+    async def update(self, analysis: Analysis) -> Analysis: ...
+    async def list_for_repository(
+        self, repo_id: uuid.UUID, *, type: AnalysisType | None = None
+    ) -> list[Analysis]: ...
+    async def latest(
+        self, repo_id: uuid.UUID, type: AnalysisType
+    ) -> Analysis | None: ...
+    async def update_status(
+        self, analysis_id: uuid.UUID, status: JobStatus, *, error_message: str | None = None
+    ) -> None: ...

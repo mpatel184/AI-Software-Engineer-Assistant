@@ -2,6 +2,7 @@
 
 All models are imported here so Alembic autogenerate and the metadata see them.
 """
+from app.infrastructure.db.models.analysis import AnalysisModel
 from app.infrastructure.db.models.repository import (
     EmbeddingsMetadataModel,
     RepositoryModel,
@@ -13,4 +14,5 @@ __all__ = [
     "RefreshTokenModel",
     "RepositoryModel",
     "EmbeddingsMetadataModel",
+    "AnalysisModel",
 ]

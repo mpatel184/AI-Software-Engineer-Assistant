@@ -12,6 +12,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.interfaces.security import PasswordHasher, TokenService
+from app.application.use_cases.analysis.service import AnalysisService
 from app.application.use_cases.auth.service import AuthService
 from app.application.use_cases.repositories.service import RepositoryService
 from app.core.config import Settings, get_settings
@@ -23,12 +24,15 @@ from app.infrastructure.auth.password import Argon2PasswordHasher
 from app.infrastructure.db.repositories.refresh_token_repository import (
     SqlAlchemyRefreshTokenRepository,
 )
+from app.infrastructure.db.repositories.analysis_repository import (
+    SqlAlchemyAnalysisRepository,
+)
 from app.infrastructure.db.repositories.repository_repository import (
     SqlAlchemyRepositoryRepository,
 )
 from app.infrastructure.db.repositories.user_repository import SqlAlchemyUserRepository
 from app.infrastructure.db.session import get_session
-from app.workers.dispatcher import CeleryIndexDispatcher
+from app.workers.dispatcher import CeleryAnalysisDispatcher, CeleryIndexDispatcher
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -76,6 +80,19 @@ def get_repository_service(session: SessionDep) -> RepositoryService:
 
 
 RepositoryServiceDep = Annotated[RepositoryService, Depends(get_repository_service)]
+
+_analysis_dispatcher = CeleryAnalysisDispatcher()
+
+
+def get_analysis_service(session: SessionDep) -> AnalysisService:
+    return AnalysisService(
+        repositories=SqlAlchemyRepositoryRepository(session),
+        analyses=SqlAlchemyAnalysisRepository(session),
+        dispatcher=_analysis_dispatcher,
+    )
+
+
+AnalysisServiceDep = Annotated[AnalysisService, Depends(get_analysis_service)]
 
 _bearer = HTTPBearer(auto_error=False)
 
