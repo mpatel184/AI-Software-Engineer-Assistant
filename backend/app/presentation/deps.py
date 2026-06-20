@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.interfaces.security import PasswordHasher, TokenService
 from app.application.use_cases.auth.service import AuthService
+from app.application.use_cases.repositories.service import RepositoryService
 from app.core.config import Settings, get_settings
 from app.domain.entities.user import User
 from app.domain.enums import TokenType
@@ -22,8 +23,12 @@ from app.infrastructure.auth.password import Argon2PasswordHasher
 from app.infrastructure.db.repositories.refresh_token_repository import (
     SqlAlchemyRefreshTokenRepository,
 )
+from app.infrastructure.db.repositories.repository_repository import (
+    SqlAlchemyRepositoryRepository,
+)
 from app.infrastructure.db.repositories.user_repository import SqlAlchemyUserRepository
 from app.infrastructure.db.session import get_session
+from app.workers.dispatcher import CeleryIndexDispatcher
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -59,6 +64,18 @@ def get_auth_service(
 
 
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+
+_index_dispatcher = CeleryIndexDispatcher()
+
+
+def get_repository_service(session: SessionDep) -> RepositoryService:
+    return RepositoryService(
+        repositories=SqlAlchemyRepositoryRepository(session),
+        dispatcher=_index_dispatcher,
+    )
+
+
+RepositoryServiceDep = Annotated[RepositoryService, Depends(get_repository_service)]
 
 _bearer = HTTPBearer(auto_error=False)
 

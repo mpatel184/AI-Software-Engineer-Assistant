@@ -45,3 +45,28 @@ export interface RegisterPayload {
   password: string;
   full_name?: string;
 }
+
+export type RepoSource = "github" | "upload";
+
+export interface Repository {
+  id: string;
+  name: string;
+  source: RepoSource;
+  status: RepoStatus;
+  github_url: string | null;
+  default_branch: string | null;
+  primary_language: string | null;
+  languages: Record<string, number>;
+  file_count: number;
+  total_lines: number;
+  size_bytes: number;
+  commit_sha: string | null;
+  error_message: string | null;
+  indexed_at: string | null;
+  created_at: string | null;
+}
+
+export interface CreateRepoPayload {
+  github_url: string;
+  name?: string;
+}

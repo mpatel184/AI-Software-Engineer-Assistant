@@ -16,3 +16,16 @@ class UserRole(str, Enum):
 class TokenType(str, Enum):
     ACCESS = "access"
     REFRESH = "refresh"
+
+
+class RepoSource(str, Enum):
+    GITHUB = "github"
+    UPLOAD = "upload"
+
+
+class RepoStatus(str, Enum):
+    PENDING = "pending"
+    CLONING = "cloning"
+    INDEXING = "indexing"
+    READY = "ready"
+    FAILED = "failed"
