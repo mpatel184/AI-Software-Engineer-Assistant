@@ -12,6 +12,22 @@ from app.domain.exceptions import DomainError
 logger = get_logger("errors")
 
 
+def _safe_validation_errors(exc: RequestValidationError) -> list[dict]:
+    """Make pydantic errors JSON-serializable.
+
+    Custom validators raise ValueError, which pydantic v2 stores as an exception
+    object inside ``ctx`` — not serializable. Stringify any such context values.
+    """
+    cleaned: list[dict] = []
+    for err in exc.errors():
+        item = dict(err)
+        ctx = item.get("ctx")
+        if isinstance(ctx, dict):
+            item["ctx"] = {k: str(v) for k, v in ctx.items()}
+        cleaned.append(item)
+    return cleaned
+
+
 def _problem(
     *, status: int, code: str, message: str, details: dict | None = None
 ) -> JSONResponse:
@@ -40,7 +56,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             status=422,
             code="validation_error",
             message="Request validation failed",
-            details={"fields": exc.errors()},
+            details={"fields": _safe_validation_errors(exc)},
         )
 
     @app.exception_handler(StarletteHTTPException)

@@ -1,8 +1,7 @@
 "use client";
 
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { Button } from "@/components/ui/button";
-import { UserCircle2 } from "lucide-react";
+import { UserMenu } from "@/components/layout/user-menu";
 
 export function Topbar() {
   return (
@@ -12,9 +11,7 @@ export function Topbar() {
       </div>
       <div className="flex items-center gap-2">
         <ThemeToggle />
-        <Button variant="ghost" size="icon" aria-label="Account">
-          <UserCircle2 className="size-5" />
-        </Button>
+        <UserMenu />
       </div>
     </header>
   );

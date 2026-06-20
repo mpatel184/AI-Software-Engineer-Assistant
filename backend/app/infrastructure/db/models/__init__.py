@@ -1,5 +1,7 @@
 """ORM model registry.
 
 All models are imported here so Alembic autogenerate and the metadata see them.
-Tables are added in the database schema implementation step.
 """
+from app.infrastructure.db.models.user import RefreshTokenModel, UserModel
+
+__all__ = ["UserModel", "RefreshTokenModel"]
