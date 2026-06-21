@@ -47,7 +47,7 @@ from app.infrastructure.db.repositories.chat_repository import (
 from app.infrastructure.db.session import get_session
 from app.infrastructure.llm.factory import get_llm_provider
 from app.infrastructure.vector.chroma_store import ChromaVectorStore
-from app.infrastructure.vector.embedder import FastEmbedEmbedder
+from app.infrastructure.vector.embedder import build_embedder
 from app.workers.dispatcher import (
     CeleryAnalysisDispatcher,
     CeleryDocumentationDispatcher,
@@ -148,9 +148,10 @@ def get_chat_service(session: SessionDep, settings: SettingsDep) -> ChatService:
     return ChatService(
         repositories=SqlAlchemyRepositoryRepository(session),
         messages=SqlAlchemyChatMessageRepository(session),
-        embedder=FastEmbedEmbedder(settings.embedding_model),
+        embedder=build_embedder(settings),
         vectors=ChromaVectorStore(host=settings.chroma_host, port=settings.chroma_port),
         llm=get_llm_provider(settings),
+        top_k=settings.retrieval_top_k,
     )
 
 

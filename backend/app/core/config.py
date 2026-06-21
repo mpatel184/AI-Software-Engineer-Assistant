@@ -6,10 +6,10 @@ they must be supplied via environment (see .env.example).
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, PostgresDsn, RedisDsn, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -27,7 +27,11 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
 
     # --- Server / CORS ---
-    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
+    # NoDecode: keep pydantic-settings from JSON-decoding this list field so a
+    # plain comma-separated value (e.g. in .env) reaches the validator below.
+    cors_origins: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["http://localhost:3000"]
+    )
 
     # --- Database ---
     database_url: PostgresDsn
@@ -60,10 +64,14 @@ class Settings(BaseSettings):
     ] = "guided_json"
     llm_request_timeout: int = 300
 
-    # --- Vector store ---
+    # --- Vector store & embeddings (local) ---
     chroma_host: str = "chroma"
     chroma_port: int = 8000
-    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    # Code-aware retrieval. Changing this changes the vector dimension and
+    # requires re-indexing existing repositories.
+    embedding_model: str = "nomic-ai/nomic-embed-text-v1.5"
+    # Top-k chunks retrieved for RAG.
+    retrieval_top_k: int = 6
 
     # --- Repository storage ---
     repo_storage_path: str = "/data/repos"

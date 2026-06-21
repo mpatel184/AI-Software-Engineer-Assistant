@@ -15,7 +15,7 @@ from app.infrastructure.db.repositories.repository_repository import (
 )
 from app.infrastructure.git.git_client import GitClient
 from app.infrastructure.vector.chroma_store import ChromaVectorStore
-from app.infrastructure.vector.embedder import FastEmbedEmbedder
+from app.infrastructure.vector.embedder import build_embedder
 from app.workers.celery_app import celery_app
 from app.workers.session import task_session
 
@@ -29,7 +29,7 @@ async def _run(repo_id: uuid.UUID) -> None:
             repositories=SqlAlchemyRepositoryRepository(session),
             embeddings_meta=SqlAlchemyEmbeddingsMetadataRepository(session),
             git=GitClient(max_size_bytes=settings.max_repo_size_mb * 1024 * 1024),
-            embedder=FastEmbedEmbedder(settings.embedding_model),
+            embedder=build_embedder(settings),
             vector_store=ChromaVectorStore(
                 host=settings.chroma_host, port=settings.chroma_port
             ),

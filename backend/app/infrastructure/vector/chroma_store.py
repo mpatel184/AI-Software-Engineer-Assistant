@@ -11,8 +11,19 @@ import uuid
 from functools import lru_cache
 
 from app.application.interfaces.vector import RetrievedChunk, VectorStorePort
+from app.domain.exceptions import ValidationError
 
 _COLLECTION = "repository_chunks"
+
+_REINDEX_HINT = (
+    "The vector store was built with a different embedding model (vector "
+    "dimension mismatch). Re-index this repository, or reset the Chroma volume, "
+    "after changing EMBEDDING_MODEL."
+)
+
+
+def _is_dimension_error(exc: Exception) -> bool:
+    return "dimension" in str(exc).lower()
 
 
 @lru_cache(maxsize=1)
@@ -45,11 +56,16 @@ class ChromaVectorStore(VectorStorePort):
     ) -> None:
         if not ids:
             return
-        await asyncio.to_thread(
-            lambda: self._collection().upsert(
-                ids=ids, embeddings=embeddings, documents=documents, metadatas=metadatas
+        try:
+            await asyncio.to_thread(
+                lambda: self._collection().upsert(
+                    ids=ids, embeddings=embeddings, documents=documents, metadatas=metadatas
+                )
             )
-        )
+        except Exception as exc:  # noqa: BLE001
+            if _is_dimension_error(exc):
+                raise ValidationError(_REINDEX_HINT) from exc
+            raise
 
     async def query(
         self,
@@ -59,18 +75,23 @@ class ChromaVectorStore(VectorStorePort):
         embedding: list[float],
         k: int,
     ) -> list[RetrievedChunk]:
-        result = await asyncio.to_thread(
-            lambda: self._collection().query(
-                query_embeddings=[embedding],
-                n_results=k,
-                where={
-                    "$and": [
-                        {"repo_id": {"$eq": str(repo_id)}},
-                        {"user_id": {"$eq": str(user_id)}},
-                    ]
-                },
+        try:
+            result = await asyncio.to_thread(
+                lambda: self._collection().query(
+                    query_embeddings=[embedding],
+                    n_results=k,
+                    where={
+                        "$and": [
+                            {"repo_id": {"$eq": str(repo_id)}},
+                            {"user_id": {"$eq": str(user_id)}},
+                        ]
+                    },
+                )
             )
-        )
+        except Exception as exc:  # noqa: BLE001
+            if _is_dimension_error(exc):
+                raise ValidationError(_REINDEX_HINT) from exc
+            raise
         documents = (result.get("documents") or [[]])[0]
         metadatas = (result.get("metadatas") or [[]])[0]
         distances = (result.get("distances") or [[]])[0]
