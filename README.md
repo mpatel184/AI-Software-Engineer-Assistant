@@ -10,7 +10,7 @@ provides repository-aware chat using Retrieval-Augmented Generation (RAG).
 Web (Next.js)  →  API (FastAPI)  →  Worker (Celery)
                        │                  │
         Postgres ◄─────┼──────► Redis ◄───┘
-        Chroma   ◄─────┴──────► Claude API
+        Chroma   ◄─────┴──────► Inference (Qwen3-Coder via vLLM/Ollama/LM Studio)
 ```
 
 - **Frontend** — Next.js (App Router) + TypeScript + Tailwind + shadcn/ui + React Query
@@ -24,50 +24,157 @@ Web (Next.js)  →  API (FastAPI)  →  Worker (Celery)
 - **Code understanding** — AST + symbol index (`code_intel`) feeding hybrid
   retrieval (semantic vectors + exact symbol lookup) for RAG chat
 
-## Quick start (Docker)
+## Installation
 
-The AI layer runs a **local Qwen3-Coder-30B** (no hosted LLM APIs). Pick an
-inference backend — vLLM is the production default (needs an NVIDIA GPU):
+The AI layer runs a **local Qwen3-Coder-30B** — no hosted LLM APIs. The fastest
+path is Docker; everything (Postgres, Redis, ChromaDB, API, worker, web, and the
+inference server) comes up together.
+
+### Prerequisites
+
+- **Docker** + Docker Compose
+- An **NVIDIA GPU** + [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
+  to serve the model (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for hardware
+  tiers and CPU/desktop options via Ollama/LM Studio)
+- For local (non-Docker) development: **Python 3.11+** and **Node.js 18+**
+
+### 1. Configure environment
 
 ```bash
-cp backend/.env.example backend/.env      # set JWT_SECRET_KEY; LLM defaults to local Qwen
+cp backend/.env.example backend/.env      # set JWT_SECRET_KEY (see below)
 cp frontend/.env.example frontend/.env
-docker compose -f docker-compose.yml -f deploy/vllm/docker-compose.vllm.yml up --build
 ```
 
-For dev on a single GPU, use Ollama instead (see **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**
-for the backend matrix, hardware requirements, and how to swap backends).
+Generate a strong JWT secret and paste it into `backend/.env`:
 
-- Web: http://localhost:3000
-- API docs: http://localhost:8000/docs
-- Health: http://localhost:8000/api/v1/health
-
-## Local development
-
-**Backend**
 ```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+The LLM defaults already point at the in-network inference service
+(`LLM_BASE_URL=http://inference:8000/v1`). To change inference backend or model,
+see the matrix in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+### 2. Start the stack
+
+```bash
+# Production default — vLLM (needs an NVIDIA GPU)
+docker compose -f docker-compose.yml -f deploy/vllm/docker-compose.vllm.yml up --build
+
+# Or, for a single-GPU dev box — Ollama
+docker compose -f docker-compose.yml -f deploy/ollama/docker-compose.ollama.yml up --build
+docker compose exec inference ollama pull qwen3-coder:30b
+docker compose exec inference ollama pull nomic-embed-text
+```
+
+The first run downloads model weights (several minutes). Database migrations run
+automatically when the API container starts.
+
+### 3. Verify
+
+- Web UI: <http://localhost:3000>
+- API docs (OpenAPI): <http://localhost:8000/docs>
+- Health: <http://localhost:8000/api/v1/health>
+
+Sign up at `/signup`, add a repository, and once it finishes indexing you can run
+analysis, scans, docs, tests, chat, and reports.
+
+## Development guide
+
+### Project layout
+
+```
+backend/
+  app/
+    domain/          entities, enums, exceptions (no framework deps)
+    application/     use-cases, ports (interfaces), services, prompts
+    infrastructure/  db, llm (providers), vector, code_intel (AST), git, ...
+    presentation/    FastAPI routers, schemas, DI (deps.py)
+    workers/         Celery app + tasks (clone/index/analyze/generate)
+  alembic/           migrations
+  tests/             unit + integration
+frontend/            Next.js App Router UI (src/app, components, lib)
+deploy/              vllm / ollama / lmstudio inference backends
+docs/                DEPLOYMENT.md (model serving + hardware)
+docker-compose.yml   db + redis + chroma + api + worker + web
+```
+
+Clean Architecture dependency rule: `domain ← application ← infrastructure/presentation`.
+Use-cases depend only on ports (e.g. `LLMPort`); concrete providers are wired in
+`presentation/deps.py`.
+
+### Run the backend locally
+
+You still need Postgres, Redis, ChromaDB, and an inference server reachable. The
+simplest combo is Docker for infra + a local API/worker:
+
+```bash
+# infra + inference only
+docker compose -f docker-compose.yml -f deploy/ollama/docker-compose.ollama.yml up db redis chroma inference
+
 cd backend
-python -m venv .venv && source .venv/bin/activate   # (Windows: .venv\Scripts\activate)
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
+
+# point the app at the host-published ports (override the in-network defaults)
+export DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/ai_swe
+export REDIS_URL=redis://localhost:6379/0
+export CHROMA_HOST=localhost CHROMA_PORT=8001
+export LLM_BASE_URL=http://localhost:11434/v1 LLM_MODEL=qwen3-coder:30b LLM_STRUCTURED_MODE=ollama_format
+export JWT_SECRET_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(48))")
+
 alembic upgrade head
 uvicorn app.main:app --reload
-pytest
+# in another shell, run the worker:
+celery -A app.workers.celery_app.celery_app worker --loglevel=info
 ```
 
-**Frontend**
+### Run the frontend locally
+
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev        # http://localhost:3000
 ```
 
-## Project layout
+Set `NEXT_PUBLIC_API_BASE_URL` in `frontend/.env` if the API isn't proxied at
+`/api/v1`.
 
+### Tests, linting, types
+
+```bash
+# backend (from backend/)
+pytest                       # full suite with coverage (configured in pyproject)
+pytest tests/unit/test_prompts.py        # a single file
+pytest -k hybrid                          # by keyword
+ruff check .                 # lint
+mypy app                     # type-check
+
+# frontend (from frontend/)
+npm run lint
+npm run typecheck            # tsc --noEmit
 ```
-backend/    FastAPI app (clean architecture), Celery worker, Alembic migrations
-frontend/   Next.js App Router UI
-docker-compose.yml   db + redis + chroma + api + worker + web
+
+### Database migrations
+
+```bash
+cd backend
+alembic upgrade head                         # apply
+alembic revision -m "describe change"        # new migration (then edit it)
+alembic downgrade -1                          # roll back one
 ```
+
+Register every new ORM model in `app/infrastructure/db/models/__init__.py` so it
+is visible to the metadata/migrations.
+
+### Adding a feature module
+
+Follow the established pattern: domain entity/enum → repository port (in
+`application/interfaces`) → SQLAlchemy model + migration + repo impl → use-case
+service (owner-scoped) and any worker pipeline → centralized prompt in
+`application/prompts` → presentation schema + router + DI in `deps.py` → frontend
+types, API client, hook, and page. Always pass repository content through
+`wrap_untrusted` before sending it to the LLM.
 
 ## Build status
 
