@@ -17,8 +17,12 @@ Web (Next.js)  →  API (FastAPI)  →  Worker (Celery)
 - **Backend** — FastAPI + SQLAlchemy (async) + Pydantic, Clean Architecture
   (`domain` ← `application` ← `infrastructure`/`presentation`)
 - **Worker** — Celery + Redis for clone / index / analyze / generate jobs
-- **Datastores** — PostgreSQL (metadata), ChromaDB (vectors), Redis (broker/cache/rate-limit)
-- **AI** — Claude API behind an `LLMPort`; local embeddings via fastembed
+- **Datastores** — PostgreSQL (metadata + symbol index), ChromaDB (vectors), Redis (broker/cache/rate-limit)
+- **AI** — **local Qwen3-Coder-30B** behind a model-agnostic `LLMProvider`
+  (vLLM / Ollama / LM Studio); local code-aware embeddings (nomic). No hosted
+  LLM APIs. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+- **Code understanding** — AST + symbol index (`code_intel`) feeding hybrid
+  retrieval (semantic vectors + exact symbol lookup) for RAG chat
 
 ## Quick start (Docker)
 
@@ -81,6 +85,7 @@ Built incrementally, module by module. All feature modules are implemented:
 - ✅ Module 10 — RAG Chat (repository-aware Q&A with source citations)
 - ✅ Module 11 — Report Generator (aggregated reports + PDF export)
 - ✅ Module 12 — Settings (profile, password change, appearance)
+- ✅ Refactoring — per-file, behavior-preserving refactoring suggestions
 
 ### Design notes
 
