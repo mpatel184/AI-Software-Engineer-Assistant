@@ -1,0 +1,45 @@
+# Ollama inference backend for Qwen3-Coder (easiest local/dev option).
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f deploy/ollama/docker-compose.ollama.yml up --build
+#   # then pull the models once (into the running container):
+#   docker compose exec inference ollama pull qwen3-coder:30b
+#   docker compose exec inference ollama pull nomic-embed-text
+#
+# backend/.env should set:
+#   LLM_BASE_URL=http://inference:11434/v1
+#   LLM_MODEL=qwen3-coder:30b
+#   LLM_STRUCTURED_MODE=ollama_format
+services:
+  inference:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  api:
+    depends_on:
+      inference:
+        condition: service_healthy
+
+  worker:
+    depends_on:
+      inference:
+        condition: service_healthy
+
+volumes:
+  ollama:

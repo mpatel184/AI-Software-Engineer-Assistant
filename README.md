@@ -22,11 +22,17 @@ Web (Next.js)  →  API (FastAPI)  →  Worker (Celery)
 
 ## Quick start (Docker)
 
+The AI layer runs a **local Qwen3-Coder-30B** (no hosted LLM APIs). Pick an
+inference backend — vLLM is the production default (needs an NVIDIA GPU):
+
 ```bash
-cp backend/.env.example backend/.env      # fill in ANTHROPIC_API_KEY, JWT_SECRET_KEY
+cp backend/.env.example backend/.env      # set JWT_SECRET_KEY; LLM defaults to local Qwen
 cp frontend/.env.example frontend/.env
-docker compose up --build
+docker compose -f docker-compose.yml -f deploy/vllm/docker-compose.vllm.yml up --build
 ```
+
+For dev on a single GPU, use Ollama instead (see **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**
+for the backend matrix, hardware requirements, and how to swap backends).
 
 - Web: http://localhost:3000
 - API docs: http://localhost:8000/docs
