@@ -9,6 +9,7 @@ from app.presentation.api.v1 import (
     chat,
     documents,
     health,
+    refactoring,
     reports,
     repositories,
     tests,
@@ -23,5 +24,6 @@ api_router.include_router(documents.router)
 api_router.include_router(tests.router)
 api_router.include_router(chat.router)
 api_router.include_router(reports.router)
+api_router.include_router(refactoring.router)
 
 # Feature routers are mounted here as each module is implemented.

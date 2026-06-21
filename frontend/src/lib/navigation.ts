@@ -9,6 +9,7 @@ import {
   Settings,
   Shield,
   Telescope,
+  Wand2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,6 +28,7 @@ export const navItems: NavItem[] = [
   { label: "Bug Detection", href: "/bugs", icon: Bug },
   { label: "Security", href: "/security", icon: Shield },
   { label: "Test Generator", href: "/tests", icon: FlaskConical },
+  { label: "Refactoring", href: "/refactoring", icon: Wand2 },
   { label: "Chat", href: "/chat", icon: MessageSquare },
   { label: "Reports", href: "/reports", icon: ScrollText },
   { label: "Settings", href: "/settings", icon: Settings },

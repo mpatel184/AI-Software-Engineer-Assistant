@@ -169,6 +169,21 @@ export interface GeneratedTest {
   notes: string;
 }
 
+export interface RefactoringSuggestion {
+  title: string;
+  category: string;
+  impact: "low" | "medium" | "high";
+  line: number;
+  rationale: string;
+  suggested_change: string;
+}
+
+export interface RefactoringResult {
+  file_path: string;
+  summary: string;
+  suggestions: RefactoringSuggestion[];
+}
+
 export type ReportType = "full" | "analysis" | "security" | "bugs";
 
 export interface ReportSummary {

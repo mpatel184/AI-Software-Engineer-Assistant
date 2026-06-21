@@ -16,6 +16,7 @@ from app.application.use_cases.analysis.service import AnalysisService
 from app.application.use_cases.auth.service import AuthService
 from app.application.use_cases.chat.service import ChatService
 from app.application.use_cases.documentation.service import DocumentationService
+from app.application.use_cases.refactoring.service import RefactoringService
 from app.application.use_cases.reports.service import ReportService
 from app.application.use_cases.repositories.service import RepositoryService
 from app.application.use_cases.tests.service import TestGenerationService
@@ -145,6 +146,20 @@ def get_test_generation_service(
 
 TestGenerationServiceDep = Annotated[
     TestGenerationService, Depends(get_test_generation_service)
+]
+
+
+def get_refactoring_service(
+    session: SessionDep, settings: SettingsDep
+) -> RefactoringService:
+    return RefactoringService(
+        repositories=SqlAlchemyRepositoryRepository(session),
+        llm=get_llm_provider(settings),
+    )
+
+
+RefactoringServiceDep = Annotated[
+    RefactoringService, Depends(get_refactoring_service)
 ]
 
 
