@@ -12,8 +12,10 @@ from app.application.interfaces.git import GitPort
 from app.application.interfaces.repositories import (
     EmbeddingsMetadataRepository,
     RepositoryRepository,
+    SymbolRepository,
 )
 from app.application.interfaces.vector import Chunk, EmbedderPort, VectorStorePort
+from app.application.services.ast_index import extract_repository_symbols
 from app.application.services.chunking import chunk_text
 from app.application.services.repo_walker import walk_source_files
 from app.core.logging import get_logger
@@ -35,6 +37,7 @@ class IndexingService:
         embedder: EmbedderPort,
         vector_store: VectorStorePort,
         clone_root: str,
+        symbols: SymbolRepository | None = None,
     ) -> None:
         self._repos = repositories
         self._meta = embeddings_meta
@@ -42,6 +45,7 @@ class IndexingService:
         self._embedder = embedder
         self._vectors = vector_store
         self._clone_root = clone_root
+        self._symbols = symbols
 
     async def run(self, repo_id: uuid.UUID) -> None:
         repo = await self._repos.get(repo_id)
@@ -72,7 +76,10 @@ class IndexingService:
             # Fresh index: clear any previous vectors/metadata for idempotency.
             await self._vectors.delete_repository(repo_id=repo_id)
             await self._meta.delete_for_repository(repo_id)
+            if self._symbols is not None:
+                await self._symbols.delete_for_repository(repo_id)
 
+            await self._index_symbols(repo_id, repo.clone_path)
             total_chunks = await self._index_working_tree(repo_id, repo.user_id, repo.clone_path)
 
             repo.status = RepoStatus.READY
@@ -88,6 +95,13 @@ class IndexingService:
                 repo_id, RepoStatus.FAILED, error_message=str(exc)[:500]
             )
             raise
+
+    async def _index_symbols(self, repo_id: uuid.UUID, clone_path: str) -> None:
+        if self._symbols is None:
+            return
+        symbols = extract_repository_symbols(clone_path, repo_id)
+        await self._symbols.bulk_add(symbols)
+        logger.info("symbols_indexed", repo_id=str(repo_id), count=len(symbols))
 
     async def _index_working_tree(
         self, repo_id: uuid.UUID, user_id: uuid.UUID, clone_path: str

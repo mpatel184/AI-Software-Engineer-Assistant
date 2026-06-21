@@ -13,6 +13,9 @@ from app.infrastructure.db.repositories.embeddings_metadata_repository import (
 from app.infrastructure.db.repositories.repository_repository import (
     SqlAlchemyRepositoryRepository,
 )
+from app.infrastructure.db.repositories.symbol_repository import (
+    SqlAlchemySymbolRepository,
+)
 from app.infrastructure.git.git_client import GitClient
 from app.infrastructure.vector.chroma_store import ChromaVectorStore
 from app.infrastructure.vector.embedder import build_embedder
@@ -34,6 +37,7 @@ async def _run(repo_id: uuid.UUID) -> None:
                 host=settings.chroma_host, port=settings.chroma_port
             ),
             clone_root=settings.repo_storage_path,
+            symbols=SqlAlchemySymbolRepository(session),
         )
         await service.run(repo_id)
 

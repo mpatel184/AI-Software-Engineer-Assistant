@@ -15,8 +15,15 @@ from app.domain.entities.chat import ChatMessage
 from app.domain.entities.document import Document
 from app.domain.entities.report import Report
 from app.domain.entities.repository import Repository
+from app.domain.entities.symbol import Symbol
 from app.domain.entities.user import User
-from app.domain.enums import AnalysisType, DocumentType, JobStatus, RepoStatus
+from app.domain.enums import (
+    AnalysisType,
+    DocumentType,
+    JobStatus,
+    RepoStatus,
+    SymbolKind,
+)
 
 
 class UserRepository(Protocol):
@@ -83,6 +90,20 @@ class AnalysisRepository(Protocol):
     async def update_status(
         self, analysis_id: uuid.UUID, status: JobStatus, *, error_message: str | None = None
     ) -> None: ...
+
+
+class SymbolRepository(Protocol):
+    async def bulk_add(self, symbols: list[Symbol]) -> None: ...
+    async def delete_for_repository(self, repo_id: uuid.UUID) -> None: ...
+    async def count_for_repository(self, repo_id: uuid.UUID) -> int: ...
+    async def search(
+        self,
+        repo_id: uuid.UUID,
+        query: str,
+        *,
+        kinds: list[SymbolKind] | None = None,
+        limit: int = 10,
+    ) -> list[Symbol]: ...
 
 
 class ReportRepository(Protocol):

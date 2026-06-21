@@ -10,6 +10,7 @@ from app.infrastructure.db.models.repository import (
     EmbeddingsMetadataModel,
     RepositoryModel,
 )
+from app.infrastructure.db.models.symbol import SymbolModel
 from app.infrastructure.db.models.user import RefreshTokenModel, UserModel
 
 __all__ = [
@@ -21,4 +22,5 @@ __all__ = [
     "DocumentModel",
     "ChatMessageModel",
     "ReportModel",
+    "SymbolModel",
 ]

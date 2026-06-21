@@ -73,6 +73,15 @@ class ChatRole(str, Enum):
     ASSISTANT = "assistant"
 
 
+class SymbolKind(str, Enum):
+    FUNCTION = "function"
+    METHOD = "method"
+    CLASS = "class"
+    ROUTE = "route"
+    IMPORT = "import"
+    VARIABLE = "variable"
+
+
 class ReportType(str, Enum):
     FULL = "full"
     ANALYSIS = "analysis"
