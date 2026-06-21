@@ -45,7 +45,7 @@ from app.infrastructure.db.repositories.chat_repository import (
     SqlAlchemyChatMessageRepository,
 )
 from app.infrastructure.db.session import get_session
-from app.infrastructure.llm.claude_client import ClaudeLLM
+from app.infrastructure.llm.factory import get_llm_provider
 from app.infrastructure.vector.chroma_store import ChromaVectorStore
 from app.infrastructure.vector.embedder import FastEmbedEmbedder
 from app.workers.dispatcher import (
@@ -135,7 +135,7 @@ def get_test_generation_service(
 ) -> TestGenerationService:
     return TestGenerationService(
         repositories=SqlAlchemyRepositoryRepository(session),
-        llm=ClaudeLLM(settings),
+        llm=get_llm_provider(settings),
     )
 
 
@@ -150,7 +150,7 @@ def get_chat_service(session: SessionDep, settings: SettingsDep) -> ChatService:
         messages=SqlAlchemyChatMessageRepository(session),
         embedder=FastEmbedEmbedder(settings.embedding_model),
         vectors=ChromaVectorStore(host=settings.chroma_host, port=settings.chroma_port),
-        llm=ClaudeLLM(settings),
+        llm=get_llm_provider(settings),
     )
 
 

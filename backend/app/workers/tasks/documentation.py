@@ -13,7 +13,7 @@ from app.infrastructure.db.repositories.document_repository import (
 from app.infrastructure.db.repositories.repository_repository import (
     SqlAlchemyRepositoryRepository,
 )
-from app.infrastructure.llm.claude_client import ClaudeLLM
+from app.infrastructure.llm.factory import get_llm_provider
 from app.workers.celery_app import celery_app
 from app.workers.session import task_session
 
@@ -26,7 +26,7 @@ async def _run(document_id: uuid.UUID) -> None:
         service = GenerateDocumentationService(
             documents=SqlAlchemyDocumentRepository(session),
             repositories=SqlAlchemyRepositoryRepository(session),
-            llm=ClaudeLLM(settings),
+            llm=get_llm_provider(settings),
         )
         await service.run(document_id)
 

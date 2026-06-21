@@ -44,10 +44,21 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
 
-    # --- Claude / AI ---
-    anthropic_api_key: str = ""
-    claude_model: str = "claude-sonnet-4-6"
-    claude_max_tokens: int = 4096
+    # --- LLM (model-agnostic; default: local Qwen3-Coder via OpenAI-compatible API) ---
+    # The inference backend (vLLM / Ollama / LM Studio) is swapped by changing
+    # llm_base_url + llm_structured_mode only; the app code is backend-agnostic.
+    llm_provider: Literal["qwen", "openai", "claude", "gemini"] = "qwen"
+    llm_base_url: str = "http://inference:8000/v1"
+    llm_api_key: str = "local"  # dummy; local servers ignore it
+    llm_model: str = "Qwen3-Coder-30B-A3B-Instruct"
+    llm_temperature: float = 0.1
+    llm_max_tokens: int = 4096
+    llm_context_size: int = 131072
+    # guided_json (vLLM) | json_schema (LM Studio/new) | ollama_format | json_object (fallback)
+    llm_structured_mode: Literal[
+        "guided_json", "json_schema", "ollama_format", "json_object"
+    ] = "guided_json"
+    llm_request_timeout: int = 300
 
     # --- Vector store ---
     chroma_host: str = "chroma"
