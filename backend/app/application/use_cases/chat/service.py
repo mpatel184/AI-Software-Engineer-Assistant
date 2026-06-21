@@ -10,16 +10,13 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
+from app.application.interfaces.code_intel import RetrieverPort
 from app.application.interfaces.llm import LLMPort, wrap_untrusted
 from app.application.interfaces.repositories import (
     ChatMessageRepository,
     RepositoryRepository,
 )
-from app.application.interfaces.vector import (
-    EmbedderPort,
-    RetrievedChunk,
-    VectorStorePort,
-)
+from app.application.interfaces.vector import RetrievedChunk
 from app.core.logging import get_logger
 from app.domain.entities.chat import ChatMessage, ChatSource
 from app.domain.enums import ChatRole, RepoStatus
@@ -72,15 +69,13 @@ class ChatService:
         *,
         repositories: RepositoryRepository,
         messages: ChatMessageRepository,
-        embedder: EmbedderPort,
-        vectors: VectorStorePort,
+        retriever: RetrieverPort,
         llm: LLMPort,
         top_k: int = 6,
     ) -> None:
         self._repos = repositories
         self._messages = messages
-        self._embedder = embedder
-        self._vectors = vectors
+        self._retriever = retriever
         self._llm = llm
         self._top_k = top_k
 
@@ -109,9 +104,8 @@ class ChatService:
 
         history = await self._messages.recent_pairs(repo_id, user_id)
 
-        embedding = await self._embedder.embed_query(question)
-        chunks = await self._vectors.query(
-            repo_id=repo_id, user_id=user_id, embedding=embedding, k=self._top_k
+        chunks = await self._retriever.retrieve(
+            repo_id=repo_id, user_id=user_id, query=question, k=self._top_k
         )
 
         context = _format_context(chunks) or "(no relevant excerpts found)"

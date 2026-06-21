@@ -34,8 +34,12 @@ from app.infrastructure.db.repositories.analysis_repository import (
 from app.infrastructure.db.repositories.document_repository import (
     SqlAlchemyDocumentRepository,
 )
+from app.application.services.hybrid_retrieval import HybridRetriever
 from app.infrastructure.db.repositories.report_repository import (
     SqlAlchemyReportRepository,
+)
+from app.infrastructure.db.repositories.symbol_repository import (
+    SqlAlchemySymbolRepository,
 )
 from app.infrastructure.db.repositories.repository_repository import (
     SqlAlchemyRepositoryRepository,
@@ -145,11 +149,15 @@ TestGenerationServiceDep = Annotated[
 
 
 def get_chat_service(session: SessionDep, settings: SettingsDep) -> ChatService:
+    retriever = HybridRetriever(
+        embedder=build_embedder(settings),
+        vectors=ChromaVectorStore(host=settings.chroma_host, port=settings.chroma_port),
+        symbols=SqlAlchemySymbolRepository(session),
+    )
     return ChatService(
         repositories=SqlAlchemyRepositoryRepository(session),
         messages=SqlAlchemyChatMessageRepository(session),
-        embedder=build_embedder(settings),
-        vectors=ChromaVectorStore(host=settings.chroma_host, port=settings.chroma_port),
+        retriever=retriever,
         llm=get_llm_provider(settings),
         top_k=settings.retrieval_top_k,
     )
