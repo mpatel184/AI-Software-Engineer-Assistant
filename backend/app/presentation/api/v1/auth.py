@@ -11,9 +11,11 @@ from app.domain.entities.user import User
 from app.domain.exceptions import AuthenticationError
 from app.presentation.deps import AuthServiceDep, CurrentUser
 from app.presentation.schemas.auth import (
+    ChangePasswordRequest,
     LoginRequest,
     RegisterRequest,
     TokenResponse,
+    UpdateProfileRequest,
     UserResponse,
 )
 
@@ -91,3 +93,33 @@ async def logout(
 @router.get("/me", response_model=UserResponse)
 async def me(current_user: CurrentUser) -> UserResponse:
     return UserResponse.model_validate(current_user)
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_profile(
+    payload: UpdateProfileRequest,
+    service: AuthServiceDep,
+    current_user: CurrentUser,
+) -> UserResponse:
+    user = await service.update_profile(
+        user_id=current_user.id, full_name=payload.full_name
+    )
+    return UserResponse.model_validate(user)
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(
+    payload: ChangePasswordRequest,
+    service: AuthServiceDep,
+    response: Response,
+    current_user: CurrentUser,
+) -> Response:
+    await service.change_password(
+        user_id=current_user.id,
+        current_password=payload.current_password,
+        new_password=payload.new_password,
+    )
+    # Sessions were invalidated; clear the refresh cookie so the client re-logs in.
+    response.delete_cookie(REFRESH_COOKIE, path=REFRESH_COOKIE_PATH)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response

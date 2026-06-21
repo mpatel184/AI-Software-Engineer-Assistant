@@ -46,3 +46,35 @@ class AnalysisType(str, Enum):
     DEAD_CODE = "dead_code"
     BUGS = "bugs"
     SECURITY = "security"
+
+
+class Severity(str, Enum):
+    INFO = "info"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class DocumentType(str, Enum):
+    README = "readme"
+    API_DOCS = "api_docs"
+    FUNCTION_DOCS = "function_docs"
+    CLASS_DOCS = "class_docs"
+
+
+class DocumentFormat(str, Enum):
+    MARKDOWN = "markdown"
+    HTML = "html"
+
+
+class ChatRole(str, Enum):
+    USER = "user"
+    ASSISTANT = "assistant"
+
+
+class ReportType(str, Enum):
+    FULL = "full"
+    ANALYSIS = "analysis"
+    SECURITY = "security"
+    BUGS = "bugs"

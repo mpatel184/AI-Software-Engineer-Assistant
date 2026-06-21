@@ -25,3 +25,12 @@ class CeleryAnalysisDispatcher:
         from app.workers.tasks.analysis import run_analysis
 
         run_analysis.delay(str(analysis_id))
+
+
+class CeleryDocumentationDispatcher:
+    """Enqueues the documentation-generation task."""
+
+    def enqueue(self, document_id: uuid.UUID) -> None:
+        from app.workers.tasks.documentation import generate_documentation
+
+        generate_documentation.delay(str(document_id))

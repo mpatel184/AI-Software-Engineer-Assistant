@@ -14,7 +14,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.application.interfaces.security import PasswordHasher, TokenService
 from app.application.use_cases.analysis.service import AnalysisService
 from app.application.use_cases.auth.service import AuthService
+from app.application.use_cases.chat.service import ChatService
+from app.application.use_cases.documentation.service import DocumentationService
+from app.application.use_cases.reports.service import ReportService
 from app.application.use_cases.repositories.service import RepositoryService
+from app.application.use_cases.tests.service import TestGenerationService
 from app.core.config import Settings, get_settings
 from app.domain.entities.user import User
 from app.domain.enums import TokenType
@@ -27,12 +31,28 @@ from app.infrastructure.db.repositories.refresh_token_repository import (
 from app.infrastructure.db.repositories.analysis_repository import (
     SqlAlchemyAnalysisRepository,
 )
+from app.infrastructure.db.repositories.document_repository import (
+    SqlAlchemyDocumentRepository,
+)
+from app.infrastructure.db.repositories.report_repository import (
+    SqlAlchemyReportRepository,
+)
 from app.infrastructure.db.repositories.repository_repository import (
     SqlAlchemyRepositoryRepository,
 )
 from app.infrastructure.db.repositories.user_repository import SqlAlchemyUserRepository
+from app.infrastructure.db.repositories.chat_repository import (
+    SqlAlchemyChatMessageRepository,
+)
 from app.infrastructure.db.session import get_session
-from app.workers.dispatcher import CeleryAnalysisDispatcher, CeleryIndexDispatcher
+from app.infrastructure.llm.claude_client import ClaudeLLM
+from app.infrastructure.vector.chroma_store import ChromaVectorStore
+from app.infrastructure.vector.embedder import FastEmbedEmbedder
+from app.workers.dispatcher import (
+    CeleryAnalysisDispatcher,
+    CeleryDocumentationDispatcher,
+    CeleryIndexDispatcher,
+)
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -93,6 +113,59 @@ def get_analysis_service(session: SessionDep) -> AnalysisService:
 
 
 AnalysisServiceDep = Annotated[AnalysisService, Depends(get_analysis_service)]
+
+_documentation_dispatcher = CeleryDocumentationDispatcher()
+
+
+def get_documentation_service(session: SessionDep) -> DocumentationService:
+    return DocumentationService(
+        repositories=SqlAlchemyRepositoryRepository(session),
+        documents=SqlAlchemyDocumentRepository(session),
+        dispatcher=_documentation_dispatcher,
+    )
+
+
+DocumentationServiceDep = Annotated[
+    DocumentationService, Depends(get_documentation_service)
+]
+
+
+def get_test_generation_service(
+    session: SessionDep, settings: SettingsDep
+) -> TestGenerationService:
+    return TestGenerationService(
+        repositories=SqlAlchemyRepositoryRepository(session),
+        llm=ClaudeLLM(settings),
+    )
+
+
+TestGenerationServiceDep = Annotated[
+    TestGenerationService, Depends(get_test_generation_service)
+]
+
+
+def get_chat_service(session: SessionDep, settings: SettingsDep) -> ChatService:
+    return ChatService(
+        repositories=SqlAlchemyRepositoryRepository(session),
+        messages=SqlAlchemyChatMessageRepository(session),
+        embedder=FastEmbedEmbedder(settings.embedding_model),
+        vectors=ChromaVectorStore(host=settings.chroma_host, port=settings.chroma_port),
+        llm=ClaudeLLM(settings),
+    )
+
+
+ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
+
+
+def get_report_service(session: SessionDep) -> ReportService:
+    return ReportService(
+        repositories=SqlAlchemyRepositoryRepository(session),
+        analyses=SqlAlchemyAnalysisRepository(session),
+        reports=SqlAlchemyReportRepository(session),
+    )
+
+
+ReportServiceDep = Annotated[ReportService, Depends(get_report_service)]
 
 _bearer = HTTPBearer(auto_error=False)
 

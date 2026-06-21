@@ -16,9 +16,12 @@ from app.application.interfaces.repositories import (
     RepositoryRepository,
 )
 from app.application.services.code_metrics import compute_metrics
+from app.application.use_cases.analysis.findings import run_findings_scan
 from app.core.logging import get_logger
-from app.domain.enums import JobStatus
+from app.domain.enums import AnalysisType, JobStatus
 from app.domain.exceptions import NotFoundError
+
+_FINDING_TYPES = {AnalysisType.BUGS, AnalysisType.SECURITY}
 
 logger = get_logger("analysis.run")
 
@@ -114,25 +117,38 @@ class RunAnalysisService:
             analysis.started_at = datetime.now(UTC)
             await self._analyses.update(analysis)
 
-            metrics = compute_metrics(repo.clone_path).to_dict()
-            digest = _build_digest(repo.name, metrics)
-
-            summary = await self._llm.complete_json(
-                system=_SYSTEM,
-                user=(
-                    "Analyze this repository digest and produce the assessment.\n\n"
-                    + wrap_untrusted(digest, label="repository digest")
-                ),
-                schema=_SUMMARY_SCHEMA,
-            )
+            if analysis.type in _FINDING_TYPES:
+                summary, metrics, score = await run_findings_scan(
+                    scan_type=analysis.type,
+                    repo_name=repo.name,
+                    clone_path=repo.clone_path,
+                    llm=self._llm,
+                )
+            else:
+                metrics = compute_metrics(repo.clone_path).to_dict()
+                digest = _build_digest(repo.name, metrics)
+                summary = await self._llm.complete_json(
+                    system=_SYSTEM,
+                    user=(
+                        "Analyze this repository digest and produce the assessment.\n\n"
+                        + wrap_untrusted(digest, label="repository digest")
+                    ),
+                    schema=_SUMMARY_SCHEMA,
+                )
+                score = _health_score(metrics)
 
             analysis.metrics = metrics
             analysis.summary = summary
-            analysis.score = _health_score(metrics)
+            analysis.score = score
             analysis.status = JobStatus.COMPLETED
             analysis.completed_at = datetime.now(UTC)
             await self._analyses.update(analysis)
-            logger.info("analysis_complete", analysis_id=str(analysis_id), score=analysis.score)
+            logger.info(
+                "analysis_complete",
+                analysis_id=str(analysis_id),
+                type=analysis.type.value,
+                score=analysis.score,
+            )
 
         except Exception as exc:  # noqa: BLE001
             logger.exception("analysis_failed", analysis_id=str(analysis_id))

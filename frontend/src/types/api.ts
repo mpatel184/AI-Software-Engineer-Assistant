@@ -46,6 +46,15 @@ export interface RegisterPayload {
   full_name?: string;
 }
 
+export interface UpdateProfilePayload {
+  full_name: string | null;
+}
+
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+}
+
 export type RepoSource = "github" | "upload";
 
 export interface Repository {
@@ -80,11 +89,24 @@ export type AnalysisType =
   | "bugs"
   | "security";
 
+export interface Finding {
+  title: string;
+  category: string;
+  severity: Severity;
+  file_path: string;
+  line: number;
+  description: string;
+  recommendation: string;
+}
+
 export interface AnalysisSummary {
   project_summary?: string;
   architecture_overview?: string;
   tech_stack?: string[];
   folder_explanation?: { path: string; purpose: string }[];
+  // Finding-based scans (bugs, security)
+  overview?: string;
+  findings?: Finding[];
 }
 
 export interface AnalysisMetrics {
@@ -97,6 +119,9 @@ export interface AnalysisMetrics {
   dependencies?: Record<string, string[]>;
   doc_coverage_pct?: number;
   folder_summary?: { path: string; files: number; lines: number }[];
+  // Finding-based scans (bugs, security)
+  counts?: Record<Severity, number>;
+  total_findings?: number;
 }
 
 export interface Analysis {
@@ -110,5 +135,69 @@ export interface Analysis {
   error_message: string | null;
   started_at: string | null;
   completed_at: string | null;
+  created_at: string | null;
+}
+
+export type DocumentType = "readme" | "api_docs" | "function_docs" | "class_docs";
+export type DocumentFormat = "markdown" | "html";
+
+export interface DocumentSummary {
+  id: string;
+  repository_id: string;
+  type: DocumentType;
+  title: string;
+  format: DocumentFormat;
+  status: JobStatus;
+  error_message: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface Document extends DocumentSummary {
+  content: string;
+}
+
+export interface RepoFiles {
+  files: string[];
+}
+
+export interface GeneratedTest {
+  file_path: string;
+  framework: string;
+  test_file_path: string;
+  test_code: string;
+  notes: string;
+}
+
+export type ReportType = "full" | "analysis" | "security" | "bugs";
+
+export interface ReportSummary {
+  id: string;
+  repository_id: string;
+  type: ReportType;
+  title: string;
+  status: JobStatus;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface Report extends ReportSummary {
+  content: string;
+}
+
+export type ChatRole = "user" | "assistant";
+
+export interface ChatSource {
+  file_path: string;
+  start_line: number;
+  end_line: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  repository_id: string;
+  role: ChatRole;
+  content: string;
+  sources: ChatSource[];
   created_at: string | null;
 }

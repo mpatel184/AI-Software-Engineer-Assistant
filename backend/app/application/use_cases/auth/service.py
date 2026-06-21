@@ -14,7 +14,11 @@ from app.application.interfaces.repositories import RefreshTokenRepository, User
 from app.application.interfaces.security import IssuedToken, PasswordHasher, TokenService
 from app.domain.entities.user import User
 from app.domain.enums import TokenType, UserRole
-from app.domain.exceptions import AlreadyExistsError, AuthenticationError
+from app.domain.exceptions import (
+    AlreadyExistsError,
+    AuthenticationError,
+    NotFoundError,
+)
 
 
 @dataclass(slots=True)
@@ -57,6 +61,29 @@ class AuthService:
             is_verified=False,
         )
         return await self._users.create(user)
+
+    async def update_profile(
+        self, *, user_id: uuid.UUID, full_name: str | None
+    ) -> User:
+        user = await self._users.get_by_id(user_id)
+        if user is None:
+            raise NotFoundError("User not found.")
+        user.full_name = full_name
+        return await self._users.update(user)
+
+    async def change_password(
+        self, *, user_id: uuid.UUID, current_password: str, new_password: str
+    ) -> None:
+        user = await self._users.get_by_id(user_id)
+        if user is None:
+            raise NotFoundError("User not found.")
+        if not self._hasher.verify(current_password, user.password_hash):
+            raise AuthenticationError("Current password is incorrect.")
+
+        user.password_hash = self._hasher.hash(new_password)
+        await self._users.update(user)
+        # Invalidate existing sessions: refresh tokens must be re-issued via login.
+        await self._refresh_tokens.revoke_all_for_user(user_id)
 
     async def authenticate(self, *, email: str, password: str) -> tuple[User, TokenPair]:
         user = await self._users.get_by_email(email.strip().lower())

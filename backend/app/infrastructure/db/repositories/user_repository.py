@@ -53,3 +53,13 @@ class SqlAlchemyUserRepository:
         await self._session.flush()
         await self._session.refresh(model)
         return _to_entity(model)
+
+    async def update(self, user: User) -> User:
+        model = await self._session.get(UserModel, user.id)
+        if model is None:
+            raise ValueError("User not found for update.")
+        model.full_name = user.full_name
+        model.password_hash = user.password_hash
+        await self._session.flush()
+        await self._session.refresh(model)
+        return _to_entity(model)

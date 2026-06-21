@@ -3,7 +3,14 @@
 import { authApi } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { tokenStore } from "@/lib/auth/token-store";
-import type { LoginPayload, RegisterPayload, TokenResponse, User } from "@/types/api";
+import type {
+  ChangePasswordPayload,
+  LoginPayload,
+  RegisterPayload,
+  TokenResponse,
+  UpdateProfilePayload,
+  User,
+} from "@/types/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export const CURRENT_USER_KEY = ["auth", "me"] as const;
@@ -45,6 +52,20 @@ export function useLogout() {
       qc.removeQueries({ queryKey: CURRENT_USER_KEY });
       qc.clear();
     },
+  });
+}
+
+export function useUpdateProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdateProfilePayload) => authApi.updateProfile(payload),
+    onSuccess: (user: User) => qc.setQueryData(CURRENT_USER_KEY, user),
+  });
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (payload: ChangePasswordPayload) => authApi.changePassword(payload),
   });
 }
 

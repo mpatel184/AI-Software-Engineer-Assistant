@@ -27,6 +27,22 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=128)
 
 
+class UpdateProfileRequest(BaseModel):
+    full_name: str | None = Field(default=None, max_length=120)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if not any(c.isalpha() for c in v) or not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain at least one letter and one number.")
+        return v
+
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
