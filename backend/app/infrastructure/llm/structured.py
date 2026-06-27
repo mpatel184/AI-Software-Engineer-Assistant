@@ -38,7 +38,7 @@ def structured_body(schema: dict, mode: str) -> dict:
 
 def schema_in_prompt(mode: str) -> bool:
     """Whether the schema must also be injected into the prompt (weak modes)."""
-    return mode in {"json_object", "ollama_format"}
+    return True  # Always inject for maximum safety with models like Gemini Flash
 
 
 def schema_instruction(schema: dict) -> str:
@@ -56,17 +56,27 @@ def parse_json(text: str) -> dict:
     can be recovered.
     """
     candidate = text.strip()
-    fenced = _FENCE.search(candidate)
-    if fenced:
-        candidate = fenced.group(1).strip()
 
+    # 1. Try parsing directly
     try:
         return json.loads(candidate)
     except json.JSONDecodeError:
         pass
 
+    # 2. Try parsing from markdown fences
+    fenced = _FENCE.search(candidate)
+    if fenced:
+        try:
+            return json.loads(fenced.group(1).strip())
+        except json.JSONDecodeError:
+            pass
+
+    # 3. Try parsing from the first { to the last }
     match = _OBJECT.search(candidate)
     if match:
-        return json.loads(match.group(0))
+        try:
+            return json.loads(match.group(0))
+        except json.JSONDecodeError:
+            pass
 
     raise ValueError("Model did not return a parseable JSON object.")

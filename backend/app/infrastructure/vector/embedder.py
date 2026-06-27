@@ -58,72 +58,41 @@ class OpenAICompatEmbedder(EmbedderPort):
         reraise=True,
     )
     def _call_embeddings_api(self, texts: list[str]) -> list[list[float]]:
-        payload: dict[str, Any] = {
-            "model": self._model,
-            "input": texts,
-        }
+        def chunk(lst, size=100):
+            for i in range(0, len(lst), size):
+                yield lst[i:i + size]
 
-        headers: dict[str, str] = {"Content-Type": "application/json"}
-        if self._api_key:
-            headers["Authorization"] = f"Bearer {self._api_key}"
+        all_embeddings: list[list[float]] = []
 
-        with httpx.Client(timeout=self._timeout) as client:
-            response = client.post(
-                f"{self._base_url}/embeddings",
-                json=payload,
-                headers=headers,
-            )
+        for batch in chunk(texts, 100):
+            payload: dict[str, Any] = {
+                "model": self._model,
+                "input": batch,
+            }
 
-        # ❗ hard failure on HTTP errors
-        if response.status_code >= 400:
-            raise RuntimeError(
-                f"Embeddings API error {response.status_code}: {response.text[:500]}"
-            )
+            headers: dict[str, str] = {"Content-Type": "application/json"}
+            if self._api_key:
+                headers["Authorization"] = f"Bearer {self._api_key}"
 
-        # Parse JSON safely
-        try:
+            with httpx.Client(timeout=self._timeout) as client:
+                response = client.post(
+                    f"{self._base_url}/embeddings",
+                    json=payload,
+                    headers=headers,
+                )
+
+            if response.status_code >= 400:
+                raise RuntimeError(
+                    f"Embeddings API error {response.status_code}: {response.text[:500]}"
+                )
+
             data = response.json()
-        except Exception as exc:
-            raise RuntimeError(f"Invalid JSON response: {response.text[:500]}") from exc
 
-        print("=" * 80)
-        print("STATUS:", response.status_code)
-        print("RAW RESPONSE:", response.text[:1000])
-        print("=" * 80)
+            items = data.get("data", [])
+            for item in items:
+                all_embeddings.append(item["embedding"])
 
-        # -------------------------------
-        # SAFE extraction logic
-        # -------------------------------
-        items = data.get("data")
-
-        if not isinstance(items, list) or len(items) == 0:
-            raise RuntimeError(f"Unexpected embeddings format: {data}")
-
-        embeddings: list[list[float]] = []
-
-        for i, item in enumerate(items):
-            if not isinstance(item, dict):
-                raise RuntimeError(f"Invalid item format at index {i}: {item}")
-
-            emb = item.get("embedding")
-
-            # Case 1: normal list
-            if isinstance(emb, list):
-                embeddings.append(emb)
-
-            # Case 2: nested Gemini-style object
-            elif isinstance(emb, dict) and "values" in emb:
-                embeddings.append(emb["values"])
-
-            # Case 3: completely unexpected
-            else:
-                raise RuntimeError(f"Unknown embedding format at index {i}: {item}")
-
-        if not embeddings:
-            raise RuntimeError(f"No embeddings extracted: {data}")
-
-        return embeddings
-
+        return all_embeddings
 
 def build_embedder(settings: Settings) -> EmbedderPort:
     return OpenAICompatEmbedder(

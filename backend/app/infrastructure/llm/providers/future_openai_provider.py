@@ -66,15 +66,18 @@ class OpenAICompatProvider(LLMProvider):
             return parse_json(text)
         except ValueError:
             logger.warning("llm_json_parse_failed_retrying", mode=self._mode)
+            logger.error("RAW LLM OUTPUT: %s", text)
 
         # One repair attempt: force prompt-embedded schema + json_object.
+        # We also strengthen the system prompt directly.
         repair_text = await self._client.chat(
-            system=system,
-            user=user + schema_instruction(schema),
+            system=system + schema_instruction(schema),
+            user=user,
             max_tokens=max_tokens,
             extra_body={"response_format": {"type": "json_object"}},
         )
         try:
             return parse_json(repair_text)
         except ValueError as exc:
+            logger.error("RAW LLM OUTPUT (REPAIR): %s", repair_text)
             raise ExternalServiceError("Model returned malformed JSON.") from exc
