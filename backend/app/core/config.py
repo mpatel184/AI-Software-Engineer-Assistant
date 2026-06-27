@@ -48,30 +48,33 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
 
-    # --- LLM (model-agnostic; default: local Qwen3-Coder via OpenAI-compatible API) ---
-    # The inference backend (vLLM / Ollama / LM Studio) is swapped by changing
-    # llm_base_url + llm_structured_mode only; the app code is backend-agnostic.
-    llm_provider: Literal["qwen", "openai", "claude", "gemini"] = "qwen"
-    llm_base_url: str = "http://inference:8000/v1"
-    llm_api_key: str = "local"  # dummy; local servers ignore it
-    llm_model: str = "Qwen3-Coder-30B-A3B-Instruct"
+    # --- LLM (model-agnostic; default: Gemini 2.5 Flash via Google AI Studio) ---
+    # The backend is fully driven by env vars — swap the endpoint/key/model to
+    # use any OpenAI-compatible API (Gemini, Z.ai GLM, OpenAI, or self-hosted).
+    llm_provider: Literal["openai", "gemini", "qwen", "claude"] = "openai"
+    llm_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
+    llm_api_key: str = "your_google_aistudio_api_key_here"
+    llm_model: str = "gemini-2.5-flash"
     llm_temperature: float = 0.1
     llm_max_tokens: int = 4096
-    llm_context_size: int = 131072
-    # guided_json (vLLM) | json_schema (LM Studio/new) | ollama_format | json_object (fallback)
+    # guided_json (vLLM only) | json_schema (Gemini/OpenAI) | ollama_format | json_object (fallback)
     llm_structured_mode: Literal[
         "guided_json", "json_schema", "ollama_format", "json_object"
-    ] = "guided_json"
-    llm_request_timeout: int = 300
+    ] = "json_schema"
+    llm_request_timeout: int = 120
 
-    # --- Vector store & embeddings (local) ---
+    # --- Embeddings (OpenAI-compatible /embeddings endpoint) ---
+    # Defaults to Google text-embedding-004 via the same Gemini API key.
+    # Set EMBEDDING_BASE_URL / EMBEDDING_API_KEY to override independently.
+    embedding_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
+    embedding_model: str = "text-embedding-004"
+    # Falls back to the LLM API key when EMBEDDING_API_KEY is not set.
+    embedding_api_key: str = ""
+    retrieval_top_k: int = 6
+
+    # --- Vector store (ChromaDB) ---
     chroma_host: str = "chroma"
     chroma_port: int = 8000
-    # Code-aware retrieval. Changing this changes the vector dimension and
-    # requires re-indexing existing repositories.
-    embedding_model: str = "nomic-ai/nomic-embed-text-v1.5"
-    # Top-k chunks retrieved for RAG.
-    retrieval_top_k: int = 6
 
     # --- Repository storage ---
     repo_storage_path: str = "/data/repos"
@@ -86,6 +89,16 @@ class Settings(BaseSettings):
     def split_cors(cls, v: str | list[str]) -> list[str]:
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
+
+    @field_validator("embedding_api_key", mode="after")
+    @classmethod
+    def default_embedding_api_key(cls, v: str, info: object) -> str:  # type: ignore[override]
+        """Fall back to llm_api_key when EMBEDDING_API_KEY is not set."""
+        if not v:
+            # info.data is populated with already-validated fields
+            data = getattr(info, "data", {})
+            return data.get("llm_api_key", v)
         return v
 
     @property

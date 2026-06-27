@@ -22,10 +22,11 @@ class AnalysisModel(UUIDMixin, Base):
         nullable=False,
     )
     type: Mapped[AnalysisType] = mapped_column(
-        Enum(AnalysisType, name="analysis_type", native_enum=True), nullable=False
+        Enum(AnalysisType, name="analysis_type", native_enum=True, values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
     )
     status: Mapped[JobStatus] = mapped_column(
-        Enum(JobStatus, name="job_status", native_enum=True),
+        Enum(JobStatus, name="job_status", native_enum=True, values_callable=lambda e: [x.value for x in e]),
         nullable=False,
         default=JobStatus.QUEUED,
     )

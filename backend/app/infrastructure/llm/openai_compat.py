@@ -1,6 +1,8 @@
 """Async client for any OpenAI-compatible chat-completions endpoint.
 
-Works unchanged against vLLM, Ollama, and LM Studio — only the base URL differs.
+Works unchanged against cloud APIs (Gemini via Google AI Studio, Z.ai GLM,
+OpenAI) and self-hosted servers (vLLM, Ollama, LM Studio) — only the base URL
+and API key differ.
 Transient network/5xx errors are retried with exponential backoff; other failures
 are mapped to ExternalServiceError.
 """

@@ -21,17 +21,18 @@ class DocumentModel(UUIDMixin, TimestampMixin, Base):
         nullable=False,
     )
     type: Mapped[DocumentType] = mapped_column(
-        Enum(DocumentType, name="document_type", native_enum=True), nullable=False
+        Enum(DocumentType, name="document_type", native_enum=True, values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
     )
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     format: Mapped[DocumentFormat] = mapped_column(
-        Enum(DocumentFormat, name="document_format", native_enum=True),
+        Enum(DocumentFormat, name="document_format", native_enum=True, values_callable=lambda e: [x.value for x in e]),
         nullable=False,
         default=DocumentFormat.MARKDOWN,
     )
     status: Mapped[JobStatus] = mapped_column(
-        Enum(JobStatus, name="job_status", native_enum=True),
+        Enum(JobStatus, name="job_status", native_enum=True, values_callable=lambda e: [x.value for x in e]),
         nullable=False,
         default=JobStatus.QUEUED,
     )

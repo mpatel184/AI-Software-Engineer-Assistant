@@ -31,13 +31,14 @@ class RepositoryModel(UUIDMixin, TimestampMixin, Base):
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     source: Mapped[RepoSource] = mapped_column(
-        Enum(RepoSource, name="repo_source", native_enum=True), nullable=False
+        Enum(RepoSource, name="repo_source", native_enum=True, values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
     )
     github_url: Mapped[str | None] = mapped_column(String(500))
     default_branch: Mapped[str | None] = mapped_column(String(200))
     clone_path: Mapped[str | None] = mapped_column(String(500))
     status: Mapped[RepoStatus] = mapped_column(
-        Enum(RepoStatus, name="repo_status", native_enum=True),
+        Enum(RepoStatus, name="repo_status", native_enum=True, values_callable=lambda e: [x.value for x in e]),
         nullable=False,
         default=RepoStatus.PENDING,
         server_default=RepoStatus.PENDING.value,

@@ -10,7 +10,7 @@ provides repository-aware chat using Retrieval-Augmented Generation (RAG).
 Web (Next.js)  →  API (FastAPI)  →  Worker (Celery)
                        │                  │
         Postgres ◄─────┼──────► Redis ◄───┘
-        Chroma   ◄─────┴──────► Inference (Qwen3-Coder via vLLM/Ollama/LM Studio)
+        Chroma   ◄─────┴──────► Cloud LLM (Gemini 2.5 Flash / Z.ai GLM)
 ```
 
 - **Frontend** — Next.js (App Router) + TypeScript + Tailwind + shadcn/ui + React Query
@@ -18,59 +18,66 @@ Web (Next.js)  →  API (FastAPI)  →  Worker (Celery)
   (`domain` ← `application` ← `infrastructure`/`presentation`)
 - **Worker** — Celery + Redis for clone / index / analyze / generate jobs
 - **Datastores** — PostgreSQL (metadata + symbol index), ChromaDB (vectors), Redis (broker/cache/rate-limit)
-- **AI** — **local Qwen3-Coder-30B** behind a model-agnostic `LLMProvider`
-  (vLLM / Ollama / LM Studio); local code-aware embeddings (nomic). No hosted
-  LLM APIs. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+- **AI** — **Gemini 2.5 Flash** (free via Google AI Studio) behind a model-agnostic
+  `LLMProvider`. Any OpenAI-compatible API (Z.ai GLM, OpenAI, or self-hosted vLLM/Ollama)
+  can be used by changing a few env vars — no code changes required.
+- **Embeddings** — Google `text-embedding-004` (768-dim, same API key as the LLM)
 - **Code understanding** — AST + symbol index (`code_intel`) feeding hybrid
   retrieval (semantic vectors + exact symbol lookup) for RAG chat
 
 ## Installation
 
-The AI layer runs a **local Qwen3-Coder-30B** — no hosted LLM APIs. The fastest
-path is Docker; everything (Postgres, Redis, ChromaDB, API, worker, web, and the
-inference server) comes up together.
+The AI layer uses a **free cloud LLM (Gemini 2.5 Flash)**. No GPU required.
+The fastest path is Docker; everything (Postgres, Redis, ChromaDB, API, worker,
+and web) comes up together.
 
 ### Prerequisites
 
 - **Docker** + Docker Compose
-- An **NVIDIA GPU** + [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
-  to serve the model (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for hardware
-  tiers and CPU/desktop options via Ollama/LM Studio)
+- **A free Gemini API key** from [aistudio.google.com](https://aistudio.google.com)
+  (no credit card required)
 - For local (non-Docker) development: **Python 3.11+** and **Node.js 18+**
 
-### 1. Configure environment
+### 1. Get a free LLM API key
+
+1. Go to [https://aistudio.google.com](https://aistudio.google.com) and sign in with your Google account.
+2. Click **Get API Key** → **Create API key**.
+3. Copy the key — you'll paste it into `backend/.env` in the next step.
+
+> **Alternative (Z.ai GLM-4.7-Flash):** Also completely free, no card needed.
+> Sign up at [z.ai](https://z.ai), create an API key, and use the commented
+> fallback block in `backend/.env.example`.
+
+### 2. Configure environment
 
 ```bash
-cp backend/.env.example backend/.env      # set JWT_SECRET_KEY (see below)
+cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
 ```
 
-Generate a strong JWT secret and paste it into `backend/.env`:
+Open `backend/.env` and set the following:
 
 ```bash
-python -c "import secrets; print(secrets.token_urlsafe(48))"
+# Required — paste your Google AI Studio key here
+LLM_API_KEY=your_google_aistudio_api_key_here
+
+# Required — generate a secure random secret
+JWT_SECRET_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(48))")
 ```
 
-The LLM defaults already point at the in-network inference service
-(`LLM_BASE_URL=http://inference:8000/v1`). To change inference backend or model,
-see the matrix in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+All other values in `.env.example` are ready to use as-is. The embeddings
+endpoint uses the same `LLM_API_KEY` automatically.
 
-### 2. Start the stack
+### 3. Start the stack
 
 ```bash
-# Production default — vLLM (needs an NVIDIA GPU)
-docker compose -f docker-compose.yml -f deploy/vllm/docker-compose.vllm.yml up --build
-
-# Or, for a single-GPU dev box — Ollama
-docker compose -f docker-compose.yml -f deploy/ollama/docker-compose.ollama.yml up --build
-docker compose exec inference ollama pull qwen3-coder:30b
-docker compose exec inference ollama pull nomic-embed-text
+docker compose up --build
 ```
 
-The first run downloads model weights (several minutes). Database migrations run
-automatically when the API container starts.
+The first run builds images and pulls model weights for the embedding API.
+Database migrations run automatically when the API container starts.
 
-### 3. Verify
+### 4. Verify
 
 - Web UI: <http://localhost:3000>
 - API docs (OpenAPI): <http://localhost:8000/docs>
@@ -94,8 +101,7 @@ backend/
   alembic/           migrations
   tests/             unit + integration
 frontend/            Next.js App Router UI (src/app, components, lib)
-deploy/              vllm / ollama / lmstudio inference backends
-docs/                DEPLOYMENT.md (model serving + hardware)
+docs/                DEPLOYMENT.md (LLM provider details)
 docker-compose.yml   db + redis + chroma + api + worker + web
 ```
 
@@ -103,24 +109,39 @@ Clean Architecture dependency rule: `domain ← application ← infrastructure/p
 Use-cases depend only on ports (e.g. `LLMPort`); concrete providers are wired in
 `presentation/deps.py`.
 
+### Switching the LLM backend
+
+The LLM layer is fully driven by env vars. To switch backends, update `backend/.env`:
+
+| Backend | `LLM_BASE_URL` | `LLM_MODEL` | `LLM_STRUCTURED_MODE` |
+|---|---|---|---|
+| **Gemini 2.5 Flash** (default) | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-2.5-flash` | `json_schema` |
+| **Z.ai GLM-4.7-Flash** | `https://open.bigmodel.cn/api/paas/v4` | `glm-4.7-flash` | `json_schema` |
+| **OpenAI GPT-4o** | `https://api.openai.com/v1` | `gpt-4o` | `json_schema` |
+| **Ollama (local)** | `http://localhost:11434/v1` | `your-model` | `ollama_format` |
+
+Set `LLM_PROVIDER=openai` for all of the above (it's the generic OpenAI-compat provider).
+
 ### Run the backend locally
 
-You still need Postgres, Redis, ChromaDB, and an inference server reachable. The
-simplest combo is Docker for infra + a local API/worker:
+You still need Postgres, Redis, and ChromaDB reachable. The simplest combo is
+Docker for infra + a local API/worker:
 
 ```bash
-# infra + inference only
-docker compose -f docker-compose.yml -f deploy/ollama/docker-compose.ollama.yml up db redis chroma inference
+# infra only
+docker compose up db redis chroma
 
 cd backend
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 
-# point the app at the host-published ports (override the in-network defaults)
+# point the app at the host-published ports
 export DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/ai_swe
 export REDIS_URL=redis://localhost:6379/0
 export CHROMA_HOST=localhost CHROMA_PORT=8001
-export LLM_BASE_URL=http://localhost:11434/v1 LLM_MODEL=qwen3-coder:30b LLM_STRUCTURED_MODE=ollama_format
+
+# set LLM and JWT vars (or source your .env file)
+export LLM_API_KEY=your_google_aistudio_api_key_here
 export JWT_SECRET_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(48))")
 
 alembic upgrade head

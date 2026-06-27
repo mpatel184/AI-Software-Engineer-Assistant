@@ -20,7 +20,7 @@ class UserModel(UUIDMixin, TimestampMixin, Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str | None] = mapped_column(String(120))
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, name="user_role", native_enum=True),
+        Enum(UserRole, name="user_role", native_enum=True, values_callable=lambda e: [x.value for x in e]),
         nullable=False,
         default=UserRole.MEMBER,
         server_default=UserRole.MEMBER.value,

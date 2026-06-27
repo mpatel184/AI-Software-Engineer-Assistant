@@ -27,7 +27,8 @@ class ChatMessageModel(UUIDMixin, Base):
         nullable=False,
     )
     role: Mapped[ChatRole] = mapped_column(
-        Enum(ChatRole, name="chat_role", native_enum=True), nullable=False
+        Enum(ChatRole, name="chat_role", native_enum=True, values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
     sources: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)

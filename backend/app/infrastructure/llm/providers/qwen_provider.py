@@ -1,4 +1,8 @@
-"""Qwen3-Coder provider over an OpenAI-compatible local backend (vLLM/Ollama/LM Studio).
+"""Qwen provider for self-hosted OpenAI-compatible backends (vLLM/Ollama/LM Studio).
+
+Retained for backward compatibility with local GPU setups.
+For cloud deployments use OpenAICompatProvider (LLM_PROVIDER=openai) or
+GeminiProvider (LLM_PROVIDER=gemini) instead.
 
 Implements the LLMProvider/LLMPort contract. JSON responses are constrained using
 the configured structured-output strategy; for weaker modes the schema is also

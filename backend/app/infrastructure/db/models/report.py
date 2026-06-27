@@ -25,12 +25,13 @@ class ReportModel(UUIDMixin, TimestampMixin, Base):
         nullable=False,
     )
     type: Mapped[ReportType] = mapped_column(
-        Enum(ReportType, name="report_type", native_enum=True), nullable=False
+        Enum(ReportType, name="report_type", native_enum=True, values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
     )
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     status: Mapped[JobStatus] = mapped_column(
-        Enum(JobStatus, name="job_status", native_enum=True),
+        Enum(JobStatus, name="job_status", native_enum=True, values_callable=lambda e: [x.value for x in e]),
         nullable=False,
         default=JobStatus.COMPLETED,
     )

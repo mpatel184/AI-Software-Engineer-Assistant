@@ -1,18 +1,23 @@
-"""Factory selecting the configured LLM provider (composition root for the AI layer)."""
+"""Factory selecting the configured LLM provider (composition root for the AI layer).
+
+The default provider is ``openai`` (OpenAICompatProvider) which works with any
+OpenAI-compatible endpoint — set LLM_BASE_URL + LLM_API_KEY + LLM_MODEL in the
+environment. See backend/.env.example for Gemini and Z.ai examples.
+"""
 from __future__ import annotations
 
 from app.core.config import Settings
 from app.infrastructure.llm.base import LLMProvider
 from app.infrastructure.llm.providers.future_claude_provider import FutureClaudeProvider
-from app.infrastructure.llm.providers.future_gemini_provider import FutureGeminiProvider
-from app.infrastructure.llm.providers.future_openai_provider import FutureOpenAIProvider
+from app.infrastructure.llm.providers.future_gemini_provider import GeminiProvider
+from app.infrastructure.llm.providers.future_openai_provider import OpenAICompatProvider
 from app.infrastructure.llm.providers.qwen_provider import QwenProvider
 
 _PROVIDERS: dict[str, type[LLMProvider]] = {
+    "openai": OpenAICompatProvider,
+    "gemini": GeminiProvider,
     "qwen": QwenProvider,
-    "openai": FutureOpenAIProvider,
     "claude": FutureClaudeProvider,
-    "gemini": FutureGeminiProvider,
 }
 
 

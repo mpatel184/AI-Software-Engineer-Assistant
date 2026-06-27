@@ -21,7 +21,8 @@ class SymbolModel(UUIDMixin, Base):
     )
     file_path: Mapped[str] = mapped_column(String(1000), nullable=False)
     kind: Mapped[SymbolKind] = mapped_column(
-        Enum(SymbolKind, name="symbol_kind", native_enum=True), nullable=False
+        Enum(SymbolKind, name="symbol_kind", native_enum=True, values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
     )
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     qualified_name: Mapped[str] = mapped_column(String(1000), nullable=False)

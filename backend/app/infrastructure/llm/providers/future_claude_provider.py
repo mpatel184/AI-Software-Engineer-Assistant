@@ -1,4 +1,8 @@
-"""Placeholder Claude provider — not implemented (local-only project)."""
+"""Placeholder Claude provider — not yet implemented.
+
+To use an LLM right now, set LLM_PROVIDER=openai (works with Gemini, Z.ai,
+OpenAI, or any OpenAI-compatible endpoint). See backend/.env.example.
+"""
 from __future__ import annotations
 
 from app.core.config import Settings
@@ -10,8 +14,9 @@ class FutureClaudeProvider(LLMProvider):
 
     def __init__(self, settings: Settings) -> None:  # noqa: ARG002
         raise NotImplementedError(
-            "ClaudeProvider is not implemented. Set LLM_PROVIDER=qwen to use the "
-            "local Qwen3-Coder backend."
+            "ClaudeProvider is not yet implemented. "
+            "Set LLM_PROVIDER=openai to use any OpenAI-compatible API "
+            "(e.g. Gemini, Z.ai GLM). See backend/.env.example."
         )
 
     async def complete(self, *, system: str, user: str, max_tokens: int | None = None) -> str:
