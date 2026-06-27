@@ -1,28 +1,15 @@
-"""EmbedderPort implementation backed by any OpenAI-compatible /embeddings endpoint.
-
-By default targets Google's ``text-embedding-004`` model via the Gemini API
-(https://generativelanguage.googleapis.com/v1beta/openai). Any other
-OpenAI-compatible embeddings endpoint can be used by changing EMBEDDING_MODEL
-and EMBEDDING_API_KEY in the environment.
-
-The HTTP call is made with httpx (already a project dependency) so no additional
-packages are required.
-
-Dimension note
---------------
-``text-embedding-004`` returns 768-dimensional vectors — the same as the
-previously used ``nomic-embed-text-v1.5``. Fresh ChromaDB collections will use
-768 dimensions automatically. Existing collections built with a different model
-will raise a dimension-mismatch ValidationError (handled by ChromaVectorStore);
-a re-index is required in that case.
-"""
 from __future__ import annotations
 
 import asyncio
 from typing import Any
 
 import httpx
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from app.application.interfaces.vector import EmbedderPort
 from app.core.config import Settings
@@ -34,7 +21,10 @@ _RETRYABLE = (httpx.ConnectError, httpx.ReadTimeout, httpx.RemoteProtocolError)
 
 
 class OpenAICompatEmbedder(EmbedderPort):
-    """Embedder backed by any OpenAI-compatible /embeddings endpoint."""
+    """
+    Embedder backed by any OpenAI-compatible /embeddings endpoint
+    (Gemini, OpenAI, Azure, etc.)
+    """
 
     def __init__(
         self,
@@ -49,10 +39,6 @@ class OpenAICompatEmbedder(EmbedderPort):
         self._model = model
         self._timeout = timeout
 
-    # ------------------------------------------------------------------
-    # EmbedderPort interface
-    # ------------------------------------------------------------------
-
     async def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
@@ -62,12 +48,7 @@ class OpenAICompatEmbedder(EmbedderPort):
         results = await asyncio.to_thread(self._embed_sync, [text])
         return results[0]
 
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
     def _embed_sync(self, texts: list[str]) -> list[list[float]]:
-        """Synchronous (blocking) call — runs in a thread pool via asyncio.to_thread."""
         return self._call_embeddings_api(texts)
 
     @retry(
@@ -77,32 +58,74 @@ class OpenAICompatEmbedder(EmbedderPort):
         reraise=True,
     )
     def _call_embeddings_api(self, texts: list[str]) -> list[list[float]]:
-        payload: dict[str, Any] = {"model": self._model, "input": texts}
+        payload: dict[str, Any] = {
+            "model": self._model,
+            "input": texts,
+        }
+
         headers: dict[str, str] = {"Content-Type": "application/json"}
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"
 
         with httpx.Client(timeout=self._timeout) as client:
             response = client.post(
-                f"{self._base_url}/embeddings", json=payload, headers=headers
+                f"{self._base_url}/embeddings",
+                json=payload,
+                headers=headers,
             )
 
+        # ❗ hard failure on HTTP errors
         if response.status_code >= 400:
             raise RuntimeError(
-                f"Embeddings API error {response.status_code}: {response.text[:300]}"
+                f"Embeddings API error {response.status_code}: {response.text[:500]}"
             )
 
-        data = response.json()
+        # Parse JSON safely
         try:
-            # OpenAI format: {"data": [{"embedding": [...], "index": N}, ...]}
-            sorted_items = sorted(data["data"], key=lambda x: x["index"])
-            return [item["embedding"] for item in sorted_items]
-        except (KeyError, TypeError) as exc:
-            raise RuntimeError("Malformed response from embeddings API.") from exc
+            data = response.json()
+        except Exception as exc:
+            raise RuntimeError(f"Invalid JSON response: {response.text[:500]}") from exc
+
+        print("=" * 80)
+        print("STATUS:", response.status_code)
+        print("RAW RESPONSE:", response.text[:1000])
+        print("=" * 80)
+
+        # -------------------------------
+        # SAFE extraction logic
+        # -------------------------------
+        items = data.get("data")
+
+        if not isinstance(items, list) or len(items) == 0:
+            raise RuntimeError(f"Unexpected embeddings format: {data}")
+
+        embeddings: list[list[float]] = []
+
+        for i, item in enumerate(items):
+            if not isinstance(item, dict):
+                raise RuntimeError(f"Invalid item format at index {i}: {item}")
+
+            emb = item.get("embedding")
+
+            # Case 1: normal list
+            if isinstance(emb, list):
+                embeddings.append(emb)
+
+            # Case 2: nested Gemini-style object
+            elif isinstance(emb, dict) and "values" in emb:
+                embeddings.append(emb["values"])
+
+            # Case 3: completely unexpected
+            else:
+                raise RuntimeError(f"Unknown embedding format at index {i}: {item}")
+
+        if not embeddings:
+            raise RuntimeError(f"No embeddings extracted: {data}")
+
+        return embeddings
 
 
 def build_embedder(settings: Settings) -> EmbedderPort:
-    """Construct the configured embedder from env settings."""
     return OpenAICompatEmbedder(
         base_url=settings.embedding_base_url,
         api_key=settings.embedding_api_key,

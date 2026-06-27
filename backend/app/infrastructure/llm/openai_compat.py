@@ -46,8 +46,8 @@ class OpenAICompatibleClient:
 
     @retry(
         retry=retry_if_exception_type(_RETRYABLE),
-        wait=wait_exponential(multiplier=1, min=2, max=20),
-        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=60),
+        stop=stop_after_attempt(6),
         reraise=True,
     )
     async def chat(
@@ -85,6 +85,9 @@ class OpenAICompatibleClient:
         except httpx.HTTPError as exc:  # noqa: BLE001
             raise ExternalServiceError(f"LLM request failed: {exc}") from exc
 
+        if response.status_code == 429:
+            # Trigger exponential backoff retry for rate limits.
+            raise httpx.RemoteProtocolError(f"LLM rate limited ({response.status_code})")
         if response.status_code >= 500:
             # Trigger a retry for transient server errors.
             raise httpx.RemoteProtocolError(f"LLM server error {response.status_code}")
