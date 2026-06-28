@@ -25,6 +25,10 @@ dependencies = [
     "httpx>=0.27",
     "reportlab>=4.2",
     "email-validator>=2.1",
+    # Local embedding dependencies
+    "sentence-transformers>=2.2.2",
+    "torch>=2.0.0",
+    "numpy>=1.24.0",
 ]
 
 [project.optional-dependencies]

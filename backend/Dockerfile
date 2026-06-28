@@ -8,9 +8,12 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# System deps: git (clone), build tools for native wheels.
+# System dependencies: git (clone), build tools for native wheels.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git build-essential curl \
+    && apt-get install -y --no-install-recommends \
+        git \
+        build-essential \
+        curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies first for better layer caching.
@@ -18,12 +21,14 @@ COPY pyproject.toml ./
 RUN pip install --upgrade pip setuptools wheel \
     && pip install .
 
+# Copy the application source.
 COPY . .
 
-# Non-root user.
+# Create non-root user.
 RUN useradd --create-home --uid 1000 appuser \
     && mkdir -p /data/repos /data/reports \
     && chown -R appuser:appuser /app /data
+
 USER appuser
 
 EXPOSE 8000

@@ -21,7 +21,9 @@ Web (Next.js)  →  API (FastAPI)  →  Worker (Celery)
 - **AI** — **Gemini 2.5 Flash** (free via Google AI Studio) behind a model-agnostic
   `LLMProvider`. Any OpenAI-compatible API (Z.ai GLM, OpenAI, or self-hosted vLLM/Ollama)
   can be used by changing a few env vars — no code changes required.
-- **Embeddings** — Google `text-embedding-004` (768-dim, same API key as the LLM)
+- **Embeddings** — By default uses Google `text-embedding-004` (768-dim).
+  Can be switched to local sentence-transformers model (`BAAI/bge-small-en-v1.5` by default)
+  by setting `EMBEDDING_PROVIDER=local` in backend/.env.
 - **Code understanding** — AST + symbol index (`code_intel`) feeding hybrid
   retrieval (semantic vectors + exact symbol lookup) for RAG chat
 
@@ -121,6 +123,22 @@ The LLM layer is fully driven by env vars. To switch backends, update `backend/.
 | **Ollama (local)** | `http://localhost:11434/v1` | `your-model` | `ollama_format` |
 
 Set `LLM_PROVIDER=openai` for all of the above (it's the generic OpenAI-compat provider).
+
+### Switching the Embedding Provider
+
+The embedding layer can use either a local sentence-transformers model or a remote OpenAI-compatible API. To switch embedding providers, update `backend/.env`:
+
+| Setting | Local (Sentence-Transformers) | Remote (OpenAI-Compatible) |
+|---|---|---|
+| `EMBEDDING_PROVIDER` | `local` | `openai_compat` (default) |
+| `EMBEDDING_BASE_URL` | *not used* | `https://generativelanguage.googleapis.com/v1beta/openai` (default) |
+| `EMBEDDING_MODEL` | *not used* | `text-embedding-004` (default) |
+| `LOCAL_EMBEDDING_MODEL` | `BAAI/bge-small-en-v1.5` (default) | *not used* |
+| `LOCAL_EMBEDDING_DEVICE` | `cpu`, `cuda`, `mps`, etc. (optional, auto-detected) | *not used* |
+| `LOCAL_EMBEDDING_NORMALIZE` | `true` (default, recommended for BGE models) | *not used* |
+| `EMBEDDING_API_KEY` | *not used* | leave blank to reuse `LLM_API_KEY` |
+
+**Note**: When using the local provider, the model will be downloaded and cached on first use. Subsequent starts will use the cached model.
 
 ### Run the backend locally
 

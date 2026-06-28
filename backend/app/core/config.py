@@ -77,7 +77,14 @@ class Settings(BaseSettings):
     llm_max_retries: int = 3          # attempts on the primary before switching
     llm_retry_backoff: float = 2.0    # base seconds for exponential backoff
 
-    # --- Embeddings (OpenAI-compatible /embeddings endpoint) ---
+    # --- Embeddings ---
+    # Supports both local (sentence-transformers) and remote (OpenAI-compatible) providers
+    embedding_provider: Literal["local", "openai_compat"] = "openai_compat"
+    # Local provider settings
+    local_embedding_model: str = "BAAI/bge-small-en-v1.5"
+    local_embedding_device: str | None = None  # None = auto-detect (cuda if available, else cpu)
+    local_embedding_normalize: bool = True
+    # Remote provider settings (OpenAI-compatible /embeddings endpoint)
     # Defaults to Google text-embedding-004 via the same Gemini API key.
     # Set EMBEDDING_BASE_URL / EMBEDDING_API_KEY to override independently.
     embedding_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
