@@ -59,3 +59,42 @@ class ExternalServiceError(DomainError):
 class ConflictError(DomainError):
     code = "conflict"
     status = 409
+
+
+# --- LLM Provider exceptions ---
+
+
+class ConfigurationError(DomainError):
+    """Required environment variable or provider config is missing/invalid."""
+
+    code = "configuration_error"
+    status = 500
+
+
+class RetryableProviderError(ExternalServiceError):
+    """Transient provider failure that may succeed on retry or after fallback.
+
+    Raised for: rate limits (429), server errors (5xx), timeouts, network blips.
+    The ProviderManager will retry and/or fall back on this exception type.
+    """
+
+    code = "retryable_provider_error"
+
+
+class ProviderUnavailableError(ExternalServiceError):
+    """All configured providers failed — no fallback remains.
+
+    Raised by ProviderManager after exhausting retries on every provider.
+    """
+
+    code = "provider_unavailable"
+
+
+class ProviderAuthenticationError(ExternalServiceError):
+    """API key is invalid or unauthorised (HTTP 401/403).
+
+    Not retryable — the ProviderManager will NOT fall back on this.
+    """
+
+    code = "provider_authentication_error"
+    status = 502  # Surface as gateway error, not 401, to the client

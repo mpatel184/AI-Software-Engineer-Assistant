@@ -48,9 +48,8 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
 
-    # --- LLM (model-agnostic; default: Gemini 2.5 Flash via Google AI Studio) ---
-    # The backend is fully driven by env vars — swap the endpoint/key/model to
-    # use any OpenAI-compatible API (Gemini, Z.ai GLM, OpenAI, or self-hosted).
+    # --- LLM — Primary provider (default: Gemini 2.5 Flash via Google AI Studio) ---
+    # Swap base URL / key / model to target any OpenAI-compatible API.
     llm_provider: Literal["openai", "gemini", "qwen", "claude"] = "openai"
     llm_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
     llm_api_key: str = "your_google_aistudio_api_key_here"
@@ -62,6 +61,21 @@ class Settings(BaseSettings):
         "guided_json", "json_schema", "ollama_format", "json_object"
     ] = "json_schema"
     llm_request_timeout: int = 120
+
+    # --- LLM — Fallback provider (Z.ai GLM) ---
+    # Set FALLBACK_PROVIDER=glm and supply GLM_API_KEY to enable automatic fallback.
+    # Leave GLM_API_KEY empty (default) to disable fallback entirely.
+    fallback_provider: Literal["glm", "none"] = "none"
+    glm_api_key: str = ""
+    glm_base_url: str = "https://open.bigmodel.cn/api/paas/v4"
+    glm_model: str = "glm-4-flash"
+    glm_structured_mode: Literal[
+        "guided_json", "json_schema", "ollama_format", "json_object"
+    ] = "json_object"
+
+    # --- LLM — Retry / fallback tuning ---
+    llm_max_retries: int = 3          # attempts on the primary before switching
+    llm_retry_backoff: float = 2.0    # base seconds for exponential backoff
 
     # --- Embeddings (OpenAI-compatible /embeddings endpoint) ---
     # Defaults to Google text-embedding-004 via the same Gemini API key.
