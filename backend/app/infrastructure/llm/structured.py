@@ -38,7 +38,7 @@ def structured_body(schema: dict, mode: str) -> dict:
 
 def schema_in_prompt(mode: str) -> bool:
     """Whether the schema must also be injected into the prompt (weak modes)."""
-    return True  # Always inject for maximum safety with models like Gemini Flash
+    return mode in {"json_object", "ollama_format"}
 
 
 def schema_instruction(schema: dict) -> str:

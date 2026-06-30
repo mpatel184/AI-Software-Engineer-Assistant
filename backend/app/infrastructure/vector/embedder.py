@@ -5,7 +5,6 @@ from typing import Any
 
 import httpx
 import numpy as np
-import torch
 from sentence_transformers import SentenceTransformer
 from tenacity import (
     retry,
@@ -30,9 +29,11 @@ def _prefixes_for(model_name: str) -> tuple[str, str]:
     Some models require specific prefixes for optimal performance.
     Returns (document_prefix, query_prefix).
     """
-    if model_name.startswith("BAAI/"):
+    if model_name.startswith("nomic-ai/nomic-embed-text"):
+        return "search_document: ", "search_query: "
+    elif model_name.startswith("BAAI/"):
         # BGE models: no document prefix, query prefix for retrieval
-        return "", "代表这个句子进行检索: "
+        return "", "Represent this sentence for searching relevant passages: "
     elif model_name.startswith("sentence-transformers/"):
         # Sentence Transformers models
         if "all-MiniLM-L6-v2" in model_name or "all-mpnet-base-v2" in model_name:
@@ -88,7 +89,7 @@ class FastEmbedEmbedder(EmbedderPort):
                     logger.info(
                         "fastembed_embedding.model_loaded",
                         model_name=self._model_name,
-                        embedding_dim=self._model.get_sentence_embedding_dimension(),
+                        embedding_dim=self._model.get_embedding_dimension(),
                     )
         return self._model
 
@@ -280,7 +281,7 @@ class LocalEmbeddingProvider(EmbedderPort):
                     logger.info(
                         "local_embedding_provider.model_loaded",
                         model_name=self._model_name,
-                        embedding_dim=self._model.get_sentence_embedding_dimension(),
+                        embedding_dim=self._model.get_embedding_dimension(),
                     )
         return self._model
 

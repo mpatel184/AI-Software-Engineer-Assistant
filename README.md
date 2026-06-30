@@ -140,6 +140,8 @@ The embedding layer can use either a local sentence-transformers model or a remo
 
 **Note**: When using the local provider, the model will be downloaded and cached on first use. Subsequent starts will use the cached model.
 
+**ChromaDB compatibility**: Chroma collections cannot mix embedding dimensions. The default local model (`BAAI/bge-small-en-v1.5`) writes 384-dimensional vectors, while the default remote model (`text-embedding-004`) writes 768-dimensional vectors. After switching `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`, or `LOCAL_EMBEDDING_MODEL`, re-index affected repositories or reset the Chroma volume before querying/upserting with the new model.
+
 ### Run the backend locally
 
 You still need Postgres, Redis, and ChromaDB reachable. The simplest combo is

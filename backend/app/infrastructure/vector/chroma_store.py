@@ -18,7 +18,10 @@ _COLLECTION = "repository_chunks"
 _REINDEX_HINT = (
     "The vector store was built with a different embedding model (vector "
     "dimension mismatch). Re-index this repository, or reset the Chroma volume, "
-    "after changing EMBEDDING_MODEL."
+    "after changing EMBEDDING_PROVIDER, EMBEDDING_MODEL, or LOCAL_EMBEDDING_MODEL. "
+    "For example, the default local model writes 384-dimensional vectors while "
+    "the default remote embedding model writes 768-dimensional vectors, and a "
+    "single Chroma collection cannot mix dimensions."
 )
 
 

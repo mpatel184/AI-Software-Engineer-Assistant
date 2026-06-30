@@ -14,18 +14,12 @@ Covers:
 from __future__ import annotations
 
 import os
-
-import pytest
-
-# Patch env before Settings is instantiated.
-os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost/test")
-os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
-os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-at-least-32-characters-long-xx")
-
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import httpx
+import pytest
 
+from app.core.config import Settings
 from app.domain.exceptions import (
     ConfigurationError,
     ExternalServiceError,
@@ -33,6 +27,11 @@ from app.domain.exceptions import (
     ProviderUnavailableError,
 )
 from app.infrastructure.llm.manager import ProviderManager, _is_auth_error, _is_retryable
+
+# Patch env before Settings is instantiated.
+os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost/test")
+os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-at-least-32-characters-long-xx")
 
 
 # ---------------------------------------------------------------------------
@@ -277,19 +276,20 @@ async def test_no_fallback_configured_raises_unavailable():
 # ---------------------------------------------------------------------------
 
 
-_REQUIRED_SETTINGS = dict(
-    database_url="postgresql+asyncpg://postgres:postgres@localhost/test",
-    redis_url="redis://localhost:6379/1",
-    jwt_secret_key="test-secret-key-at-least-32-characters-long-xx",
-    llm_api_key="fake-gemini-key",
-)
+_REQUIRED_SETTINGS = {
+    "database_url": "postgresql+asyncpg://postgres:postgres@localhost/test",
+    "redis_url": "redis://localhost:6379/1",
+    "jwt_secret_key": "test-secret-key-at-least-32-characters-long-xx",  # noqa: S106
+    "llm_api_key": "fake-gemini-key",
+    "debug": False,
+    "fallback_provider": "none",
+    "glm_api_key": "",
+}
 
 
-def _settings(**overrides) -> "Settings":  # type: ignore[name-defined]
+def _settings(**overrides: object) -> Settings:
     """Build a Settings instance with test defaults, bypassing env + lru_cache."""
-    from app.core.config import Settings
-
-    return Settings(**{**_REQUIRED_SETTINGS, **overrides})
+    return Settings(_env_file=None, **{**_REQUIRED_SETTINGS, **overrides})
 
 
 def test_factory_builds_provider_manager_for_gemini():
