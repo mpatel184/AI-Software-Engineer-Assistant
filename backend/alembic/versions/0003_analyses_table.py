@@ -19,7 +19,7 @@ depends_on: str | Sequence[str] | None = None
 
 _ANALYSIS_TYPES = (
     "architecture", "dependencies", "complexity", "duplication",
-    "dead_code", "bugs", "security",
+    "dead_code", "bugs", "security", "trust_risk",
 )
 _JOB_STATUSES = ("queued", "running", "completed", "failed")
 

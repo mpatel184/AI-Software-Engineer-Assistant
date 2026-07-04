@@ -46,6 +46,7 @@ class AnalysisType(str, Enum):
     DEAD_CODE = "dead_code"
     BUGS = "bugs"
     SECURITY = "security"
+    TRUST_RISK = "trust_risk"
 
 
 class Severity(str, Enum):

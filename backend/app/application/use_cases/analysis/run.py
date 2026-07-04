@@ -17,10 +17,22 @@ from app.application.interfaces.repositories import (
     RepositoryRepository,
 )
 from app.application.services.code_metrics import compute_metrics
+from app.application.services.trust_analysis import TrustAnalysisService
 from app.application.use_cases.analysis.findings import run_findings_scan
 from app.core.logging import get_logger
 from app.domain.enums import AnalysisType, JobStatus
 from app.domain.exceptions import NotFoundError
+
+
+async def run_trust_risk_scan(
+    *,
+    repo_name: str,
+    clone_path: str,
+) -> tuple[dict, dict, int]:
+    """Run trust and risk analysis on a repository."""
+    service = TrustAnalysisService()
+    return service.run(clone_path)
+
 
 _FINDING_TYPES = {AnalysisType.BUGS, AnalysisType.SECURITY}
 
@@ -113,7 +125,10 @@ class RunAnalysisService:
             analysis.started_at = datetime.now(UTC)
             await self._analyses.update(analysis)
 
-            if analysis.type in _FINDING_TYPES:
+            if analysis.type == AnalysisType.TRUST_RISK:
+                trust_service = TrustAnalysisService()
+                summary, metrics, score = trust_service.run(repo.clone_path)
+            elif analysis.type in {AnalysisType.BUGS, AnalysisType.SECURITY}:
                 summary, metrics, score = await run_findings_scan(
                     scan_type=analysis.type,
                     repo_name=repo.name,
