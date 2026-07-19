@@ -7,7 +7,7 @@ from app.core.config import get_settings
 from app.core.logging import setup_logging
 
 settings = get_settings()
-setup_logging(debug=settings.debug, json_logs=settings.is_production)
+setup_logging(debug=settings.debug, json_logs=False)
 
 celery_app = Celery(
     "ai_swe_assistant",

@@ -6,7 +6,6 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Cookie, Response, status
 
 from app.application.use_cases.auth.service import TokenPair
-from app.core.config import get_settings
 from app.domain.entities.user import User
 from app.domain.exceptions import AuthenticationError
 from app.presentation.deps import AuthServiceDep, CurrentUser
@@ -26,14 +25,13 @@ REFRESH_COOKIE_PATH = "/api/v1/auth"
 
 
 def _set_refresh_cookie(response: Response, pair: TokenPair) -> None:
-    settings = get_settings()
     max_age = int((pair.refresh.expires_at - datetime.now(UTC)).total_seconds())
     response.set_cookie(
         key=REFRESH_COOKIE,
         value=pair.refresh.token,
         max_age=max_age,
         httponly=True,
-        secure=settings.is_production,
+        secure=False,
         samesite="lax",
         path=REFRESH_COOKIE_PATH,
     )

@@ -8,8 +8,7 @@ Provider hierarchy:
     LLMProvider (ABC)
      ├── OpenAICompatProvider   (default — any OpenAI-compatible API, e.g. Gemini, Z.ai)
      ├── GeminiProvider         (alias of OpenAICompatProvider with name="gemini")
-     ├── QwenProvider           (backward-compat for local self-hosted setups)
-     └── FutureClaudeProvider   (stub)
+     └── QwenProvider           (backward-compat for local self-hosted setups)
 """
 from __future__ import annotations
 

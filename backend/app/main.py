@@ -19,7 +19,7 @@ logger = get_logger("app")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    logger.info("startup", environment=settings.environment, app=settings.app_name)
+    logger.info("startup", environment="development", app=settings.app_name)
     yield
     await engine.dispose()
     logger.info("shutdown")
@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    setup_logging(debug=settings.debug, json_logs=settings.is_production)
+    setup_logging(debug=settings.debug, json_logs=False)
 
     app = FastAPI(
         title=settings.app_name,

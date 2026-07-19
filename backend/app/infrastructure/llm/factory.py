@@ -31,7 +31,6 @@ from app.core.logging import get_logger
 from app.domain.exceptions import ConfigurationError
 from app.infrastructure.llm.base import LLMProvider
 from app.infrastructure.llm.manager import ProviderManager
-from app.infrastructure.llm.providers.future_claude_provider import FutureClaudeProvider
 from app.infrastructure.llm.providers.future_gemini_provider import GeminiProvider
 from app.infrastructure.llm.providers.future_openai_provider import OpenAICompatProvider
 from app.infrastructure.llm.providers.glm_provider import GLMProvider
@@ -43,7 +42,6 @@ _PRIMARY_PROVIDERS: dict[str, type[LLMProvider]] = {
     "openai": OpenAICompatProvider,
     "gemini": GeminiProvider,
     "qwen": QwenProvider,
-    "claude": FutureClaudeProvider,
 }
 
 _FALLBACK_PROVIDERS: dict[str, type[LLMProvider]] = {

@@ -22,7 +22,6 @@ class Settings(BaseSettings):
 
     # --- App ---
     app_name: str = "AI Software Engineer Assistant"
-    environment: Literal["development", "staging", "production"] = "development"
     debug: bool = False
     api_v1_prefix: str = "/api/v1"
 
@@ -50,7 +49,7 @@ class Settings(BaseSettings):
 
     # --- LLM — Primary provider (default: Gemini 2.5 Flash via Google AI Studio) ---
     # Swap base URL / key / model to target any OpenAI-compatible API.
-    llm_provider: Literal["openai", "gemini", "qwen", "claude"] = "openai"
+    llm_provider: Literal["openai", "gemini", "qwen"] = "openai"
     llm_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
     llm_api_key: str = "your_google_aistudio_api_key_here"
     llm_model: str = "gemini-2.5-flash"
@@ -100,10 +99,6 @@ class Settings(BaseSettings):
     # --- Repository storage ---
     repo_storage_path: str = "/data/repos"
     max_repo_size_mb: int = 500
-    report_storage_path: str = "/data/reports"
-
-    # --- Rate limiting ---
-    rate_limit_per_minute: int = 60
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -121,10 +116,6 @@ class Settings(BaseSettings):
             data = getattr(info, "data", {})
             return data.get("llm_api_key", v)
         return v
-
-    @property
-    def is_production(self) -> bool:
-        return self.environment == "production"
 
     @property
     def sync_database_url(self) -> str:
