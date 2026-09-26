@@ -40,7 +40,7 @@ The entire stack (Postgres, Redis, ChromaDB, FastAPI Backend, Celery Worker, Nex
 
 3. **Start the Stack**
    ```bash
-   docker compose up --build -d
+   npm run docker:up
    ```
    This will spin up all containers in the background. Database migrations (`alembic upgrade head`) run automatically when the API container starts.
 

@@ -73,8 +73,12 @@ endpoint uses the same `LLM_API_KEY` automatically.
 ### 3. Start the stack
 
 ```bash
-docker compose up --build
+npm run docker
 ```
+
+This runs Docker Compose in the foreground. To start it in the background, use
+`npm run docker:up`; use `npm run docker:logs` to follow container output and
+`npm run docker:down` to stop the stack.
 
 The first run builds images and pulls model weights for the embedding API.
 Database migrations run automatically when the API container starts.

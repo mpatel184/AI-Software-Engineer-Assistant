@@ -1,0 +1,12 @@
+{
+  "name": "ai-software-engineer-assistant",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "docker": "docker compose up --build",
+    "docker:up": "docker compose up --build -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:restart": "docker compose down && docker compose up --build -d"
+  }
+}
