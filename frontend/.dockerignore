@@ -1,0 +1,30 @@
+# Dependencies (reinstalled in container)
+node_modules
+npm-debug.log*
+
+# Next.js build output (rebuilt in container)
+.next
+out
+
+# Version control
+.git
+.gitignore
+
+# Environment files (injected via docker-compose env_file)
+.env
+.env.*
+!.env.example
+
+# Editor & OS files
+.DS_Store
+*.log
+.vscode
+.idea
+
+# Test & lint
+coverage
+.eslintcache
+
+# Docker files (not needed inside the image)
+Dockerfile
+.dockerignore
