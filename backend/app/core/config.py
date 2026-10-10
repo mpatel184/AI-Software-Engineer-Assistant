@@ -98,7 +98,7 @@ class Settings(BaseSettings):
 
     # --- Repository storage ---
     repo_storage_path: str = "/data/repos"
-    max_repo_size_mb: int = 500
+    max_repo_size_mb: int = 800
 
     @field_validator("cors_origins", mode="before")
     @classmethod

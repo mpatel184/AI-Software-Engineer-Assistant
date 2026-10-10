@@ -19,8 +19,8 @@ SOURCE_EXTENSIONS: frozenset[str] = frozenset(
     }
 )
 
-# Hard cap on a single file's size to index (bytes).
-MAX_FILE_SIZE_BYTES: int = 1_000_000
+# Hard cap on a single file's size to index (bytes) - 5 MB.
+MAX_FILE_SIZE_BYTES: int = 5_000_000
 
 # Default RAG retrieval depth.
 DEFAULT_RETRIEVAL_K: int = 6
