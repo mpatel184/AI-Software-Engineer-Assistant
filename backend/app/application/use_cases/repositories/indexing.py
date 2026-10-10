@@ -6,6 +6,7 @@ failure message on any error. Runs inside the Celery worker.
 """
 from __future__ import annotations
 
+import hashlib
 import uuid
 
 from app.application.interfaces.git import GitPort
@@ -129,7 +130,10 @@ class IndexingService:
         self, repo_id: uuid.UUID, user_id: uuid.UUID, batch: list[Chunk]
     ) -> None:
         embeddings = await self._embedder.embed([c.content for c in batch])
-        chroma_ids = [f"{repo_id}:{c.file_path}:{c.chunk_index}" for c in batch]
+        chroma_ids = [
+            hashlib.sha256(f"{repo_id}:{c.file_path}:{c.chunk_index}".encode()).hexdigest()
+            for c in batch
+        ]
         metadatas = [
             {
                 "repo_id": str(repo_id),

@@ -12,6 +12,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV API_PROXY_URL=http://api:8000
 RUN npm run build
 
 # ── Stage 3: Minimal production runner ────────────────────────────────────────

@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   output: "standalone",
+  experimental: {
+    proxyTimeout: 120_000,
+  },
   async rewrites() {
     // Proxy API calls to the FastAPI backend, keeping the browser same-origin.
     const apiUrl = process.env.API_PROXY_URL || "http://localhost:8000";
